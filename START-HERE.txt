@@ -1,0 +1,24 @@
+🎮 EMOJI BATTLE SERVER - SIMPLE START GUIDE
+===========================================
+
+STEP 1: Make sure this folder is on your DESKTOP
+        (You should see this folder when you open Finder → Desktop)
+
+STEP 2: Open Terminal
+        Press Cmd+Space, type "terminal", press Enter
+
+STEP 3: Copy and paste this command into Terminal:
+        
+        cd ~/Desktop/emoji-battle-server-DESKTOP && npm install && npm start
+
+        (Just copy that whole line and paste it in Terminal, then press Enter)
+
+STEP 4: Wait for "Server running on port 3000"
+
+STEP 5: Open your browser to:
+        http://localhost:3000/diagnostic.html
+
+That's it! Three commands total!
+
+🆘 HAVING PROBLEMS?
+   Open TROUBLESHOOTING.md for help

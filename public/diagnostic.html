@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Connection Diagnostic</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a2e;
+            color: #fff;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #e94560;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e94560;
+            padding-bottom: 10px;
+        }
+        .section {
+            background: #0f3460;
+            border: 2px solid #e94560;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .good { background: #2ecc71; color: #000; }
+        .bad { background: #e74c3c; }
+        .warn { background: #f39c12; color: #000; }
+        .info { background: #3498db; }
+        .log-entry {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(0,0,0,0.3);
+            border-left: 3px solid #e94560;
+            font-size: 14px;
+            word-wrap: break-word;
+        }
+        .timestamp {
+            color: #888;
+            font-size: 12px;
+        }
+        button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover { background: #ff6b6b; }
+        code {
+            background: rgba(0,0,0,0.5);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #2ecc71;
+        }
+        .checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+        .checklist li {
+            padding: 8px;
+            margin: 5px 0;
+        }
+        .checklist .pass::before {
+            content: '✅ ';
+        }
+        .checklist .fail::before {
+            content: '❌ ';
+        }
+        .checklist .pending::before {
+            content: '⏳ ';
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Socket.io Server Diagnostic Tool</h1>
+        
+        <div class="section">
+            <h2>📊 Connection Status</h2>
+            <div id="connectionStatus" class="status warn">⏳ Initializing...</div>
+            <div style="margin-top: 10px;">
+                <strong>Current URL:</strong> <code id="currentUrl"></code><br>
+                <strong>Protocol:</strong> <code id="protocol"></code><br>
+                <strong>Expected Server:</strong> <code id="expectedServer"></code>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>✅ Pre-Flight Checklist</h2>
+            <ul class="checklist" id="checklist">
+                <li id="check-url" class="pending">Checking if accessed via server...</li>
+                <li id="check-socketio" class="pending">Checking if Socket.io library loaded...</li>
+                <li id="check-server" class="pending">Attempting connection to server...</li>
+                <li id="check-port" class="pending">Verifying port 3000...</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🔧 Quick Actions</h2>
+            <button onclick="testConnection()">🔄 Retry Connection</button>
+            <button onclick="testServerHealth()">❤️ Check Server Health</button>
+            <button onclick="clearLogs()">🗑️ Clear Logs</button>
+        </div>
+
+        <div class="section">
+            <h2>📝 Event Log</h2>
+            <div id="logContainer" style="max-height: 400px; overflow-y: auto;"></div>
+        </div>
+
+        <div class="section">
+            <h2>⚠️ Common Issues & Solutions</h2>
+            <div style="font-size: 14px;">
+                <p><strong>❌ File protocol detected (file:///)</strong></p>
+                <p style="margin-left: 20px;">→ Don't open HTML file directly! Start server and use <code>http://localhost:3000/diagnostic.html</code></p>
+                
+                <p style="margin-top: 15px;"><strong>❌ Server not running</strong></p>
+                <p style="margin-left: 20px;">→ Open terminal and run: <code>npm install</code> then <code>npm start</code></p>
+                
+                <p style="margin-top: 15px;"><strong>❌ Wrong port</strong></p>
+                <p style="margin-left: 20px;">→ Make sure server.js uses port 3000 and you're accessing localhost:3000</p>
+                
+                <p style="margin-top: 15px;"><strong>❌ Socket.io not loading</strong></p>
+                <p style="margin-left: 20px;">→ Check browser console (F12) for 404 errors on /socket.io/socket.io.js</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.io Client -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let socket;
+        const logs = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            logs.push({ timestamp, message, type });
+            
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            container.insertBefore(entry, container.firstChild);
+            
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function updateStatus(message, className) {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + className;
+        }
+
+        function updateCheck(id, status, message) {
+            const elem = document.getElementById(id);
+            if (elem) {
+                elem.className = status;
+                elem.textContent = message;
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logContainer').innerHTML = '';
+            logs.length = 0;
+            log('Logs cleared', 'info');
+        }
+
+        // Display current environment info
+        document.getElementById('currentUrl').textContent = window.location.href;
+        document.getElementById('protocol').textContent = window.location.protocol;
+        document.getElementById('expectedServer').textContent = 
+            window.location.protocol === 'file:' ? 
+            '⚠️ FILE PROTOCOL - Won\'t work!' : 
+            window.location.origin;
+
+        // Check #1: URL Protocol
+        function checkProtocol() {
+            if (window.location.protocol === 'file:') {
+                updateCheck('check-url', 'fail', 
+                    '❌ Accessed via file:// - Server is required! Use http://localhost:3000/diagnostic.html');
+                log('ERROR: Opened file directly. Must access via http://localhost:3000', 'error');
+                updateStatus('❌ File Protocol Detected - Cannot Connect', 'bad');
+                return false;
+            } else {
+                updateCheck('check-url', 'pass', '✅ Accessed via HTTP server');
+                log('✓ Correct protocol: ' + window.location.protocol, 'success');
+                return true;
+            }
+        }
+
+        // Check #2: Socket.io library
+        function checkSocketIO() {
+            if (typeof io === 'undefined') {
+                updateCheck('check-socketio', 'fail', 
+                    '❌ Socket.io library not loaded - Check server is running');
+                log('ERROR: Socket.io library not found. Server may not be running.', 'error');
+                updateStatus('❌ Socket.io Library Missing', 'bad');
+                return false;
+            } else {
+                updateCheck('check-socketio', 'pass', '✅ Socket.io library loaded');
+                log('✓ Socket.io library loaded successfully', 'success');
+                return true;
+            }
+        }
+
+        // Check #3: Connection attempt
+        function testConnection() {
+            if (!checkProtocol() || !checkSocketIO()) {
+                return;
+            }
+
+            log('🔌 Attempting to connect to server...', 'info');
+            updateStatus('🔌 Connecting to server...', 'warn');
+            updateCheck('check-server', 'pending', '⏳ Connecting...');
+
+            try {
+                // Disconnect existing socket if any
+                if (socket) {
+                    socket.disconnect();
+                }
+
+                // Create new connection
+                socket = io({
+                    reconnection: true,
+                    reconnectionDelay: 1000,
+                    reconnectionAttempts: 5,
+                    timeout: 10000
+                });
+
+                socket.on('connect', () => {
+                    updateStatus('✅ Connected Successfully!', 'good');
+                    updateCheck('check-server', 'pass', `✅ Connected! Socket ID: ${socket.id}`);
+                    updateCheck('check-port', 'pass', '✅ Port 3000 accessible');
+                    log(`🎉 Successfully connected! Socket ID: ${socket.id}`, 'success');
+                });
+
+                socket.on('connect_error', (error) => {
+                    updateStatus('❌ Connection Error', 'bad');
+                    updateCheck('check-server', 'fail', '❌ Cannot connect to server');
+                    updateCheck('check-port', 'fail', '❌ Port 3000 not responding');
+                    log(`❌ Connection error: ${error.message}`, 'error');
+                    log('💡 Make sure server is running: npm start', 'warn');
+                });
+
+                socket.on('disconnect', (reason) => {
+                    updateStatus('⚠️ Disconnected', 'warn');
+                    log(`⚠️ Disconnected: ${reason}`, 'warn');
+                });
+
+                socket.on('connect_timeout', () => {
+                    updateStatus('⏱️ Connection Timeout', 'bad');
+                    updateCheck('check-server', 'fail', '❌ Connection timeout (10s)');
+                    log('⏱️ Connection timeout after 10 seconds', 'error');
+                    log('💡 Server may be down or port blocked', 'warn');
+                });
+
+                socket.on('reconnect_attempt', (attemptNumber) => {
+                    log(`🔄 Reconnection attempt ${attemptNumber}...`, 'info');
+                });
+
+                socket.on('reconnect_failed', () => {
+                    updateStatus('❌ Reconnection Failed', 'bad');
+                    log('❌ All reconnection attempts failed', 'error');
+                });
+
+            } catch (error) {
+                updateStatus('❌ Error Initializing', 'bad');
+                log(`❌ Exception: ${error.message}`, 'error');
+            }
+        }
+
+        // Check server health endpoint
+        async function testServerHealth() {
+            log('🏥 Checking server health endpoint...', 'info');
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                log(`✅ Server health: ${JSON.stringify(data)}`, 'success');
+                updateStatus('✅ Server is Healthy', 'good');
+            } catch (error) {
+                log(`❌ Health check failed: ${error.message}`, 'error');
+                log('💡 This usually means the server is not running', 'warn');
+            }
+        }
+
+        // Auto-run diagnostics on load
+        window.addEventListener('load', () => {
+            log('🚀 Diagnostic tool loaded', 'info');
+            log('🔍 Running automatic checks...', 'info');
+            
+            setTimeout(() => {
+                checkProtocol();
+                checkSocketIO();
+                
+                if (window.location.protocol !== 'file:' && typeof io !== 'undefined') {
+                    testConnection();
+                } else {
+                    log('⚠️ Pre-flight checks failed. Fix issues above and retry.', 'warn');
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>

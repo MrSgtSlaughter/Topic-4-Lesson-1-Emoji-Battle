@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.io Multiplayer Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #fff;
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: #0f3460;
+            border: 2px solid #e94560;
+        }
+        .connected { border-color: #2ecc71; }
+        .disconnected { border-color: #e74c3c; }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #ff6b6b;
+        }
+        #players {
+            margin-top: 20px;
+        }
+        .player {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(233, 69, 96, 0.2);
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Socket.io Multiplayer Connection Test</h1>
+    
+    <div id="status" class="status">
+        Status: <span id="connectionStatus">Connecting...</span><br>
+        Your ID: <span id="playerId">-</span>
+    </div>
+
+    <div>
+        <input type="text" id="playerName" placeholder="Enter your name" style="padding: 10px; width: 200px;">
+        <select id="roomSelect" style="padding: 10px;">
+            <option value="arena-a">Arena A</option>
+            <option value="arena-b">Arena B</option>
+            <option value="arena-c">Arena C</option>
+        </select>
+        <button onclick="joinRoom()">Join Room</button>
+    </div>
+
+    <div id="players">
+        <h3>Players in Room:</h3>
+        <div id="playerList"></div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <button onclick="testBattle()">Test Battle System</button>
+        <button onclick="requestRoomCounts()">Get Room Counts</button>
+    </div>
+
+    <div id="log" style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px; max-height: 300px; overflow-y: auto;">
+        <h3>Event Log:</h3>
+        <div id="logContent"></div>
+    </div>
+
+    <!-- Socket.io Client -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let socket;
+        let currentRoom = null;
+        let otherPlayers = {};
+
+        function log(message) {
+            const logContent = document.getElementById('logContent');
+            const timestamp = new Date().toLocaleTimeString();
+            logContent.innerHTML = `<div>[${timestamp}] ${message}</div>` + logContent.innerHTML;
+        }
+
+        // Initialize Socket.io
+        socket = io();
+
+        socket.on('connect', () => {
+            document.getElementById('connectionStatus').textContent = 'Connected ✓';
+            document.getElementById('status').className = 'status connected';
+            document.getElementById('playerId').textContent = socket.id;
+            log('✅ Connected to server! ID: ' + socket.id);
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('connectionStatus').textContent = 'Disconnected ✗';
+            document.getElementById('status').className = 'status disconnected';
+            log('❌ Disconnected from server');
+        });
+
+        // Room state when joining
+        socket.on('roomState', (data) => {
+            log('📦 Received room state');
+            console.log('Room state:', data);
+            otherPlayers = data.players || {};
+            updatePlayerList();
+        });
+
+        // New player joined
+        socket.on('playerJoined', (data) => {
+            log('👋 Player joined: ' + (data.playerData.name || data.playerId));
+            otherPlayers[data.playerId] = data.playerData;
+            updatePlayerList();
+        });
+
+        // Player update
+        socket.on('playerUpdate', (data) => {
+            if (otherPlayers[data.playerId]) {
+                otherPlayers[data.playerId] = { ...otherPlayers[data.playerId], ...data.playerData };
+            }
+        });
+
+        // Player left
+        socket.on('playerLeft', (data) => {
+            log('👋 Player left: ' + data.playerId);
+            delete otherPlayers[data.playerId];
+            updatePlayerList();
+        });
+
+        // Battle started
+        socket.on('battleStarted', (data) => {
+            log('⚔️ Battle started: ' + data.battleId);
+            console.log('Battle data:', data);
+        });
+
+        // Battle ended
+        socket.on('battleEnded', (data) => {
+            log('🏆 Battle ended! Winner: ' + data.winner);
+            console.log('Battle result:', data);
+        });
+
+        // Room counts
+        socket.on('roomCounts', (counts) => {
+            log('📊 Room counts updated');
+            console.log('Room counts:', counts);
+        });
+
+        function joinRoom() {
+            const name = document.getElementById('playerName').value || 'Anonymous';
+            const room = document.getElementById('roomSelect').value;
+            
+            currentRoom = room;
+            
+            const playerData = {
+                name: name,
+                emoji: '⭐',
+                x: Math.random() * 4000,
+                y: Math.random() * 4000,
+                knockouts: 0
+            };
+
+            socket.emit('joinRoom', { room, playerData });
+            log(`🚪 Joining ${room} as ${name}`);
+        }
+
+        function updatePlayerList() {
+            const list = document.getElementById('playerList');
+            const playerIds = Object.keys(otherPlayers);
+            
+            if (playerIds.length === 0) {
+                list.innerHTML = '<div style="color: #888">No other players in room</div>';
+                return;
+            }
+
+            list.innerHTML = playerIds.map(id => {
+                const p = otherPlayers[id];
+                return `<div class="player">${p.emoji || '⭐'} ${p.name || 'Player'} - ${p.knockouts || 0} KOs</div>`;
+            }).join('');
+        }
+
+        function testBattle() {
+            if (!currentRoom) {
+                alert('Join a room first!');
+                return;
+            }
+
+            const playerIds = Object.keys(otherPlayers);
+            if (playerIds.length === 0) {
+                alert('No other players to battle!');
+                return;
+            }
+
+            const targetId = playerIds[0];
+            
+            socket.emit('startBattle', {
+                initiator: socket.id,
+                target: targetId,
+                question: { text: 'Test question?', correct: 'A' }
+            });
+            
+            log('⚔️ Started battle with ' + otherPlayers[targetId].name);
+        }
+
+        function requestRoomCounts() {
+            socket.emit('requestRoomCounts');
+            log('📊 Requested room counts');
+        }
+
+        // Test connection on load
+        log('🔌 Initializing connection...');
+    </script>
+</body>
+</html>
