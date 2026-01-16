@@ -102,6 +102,51 @@
         .quiz-timer-bar {
             height: 100%; background: #e94560; width: 100%; transition: width 1s linear;
         }
+
+        /* Minimap */
+        #minimap {
+            position: absolute; bottom: 20px; right: 20px;
+            border: 3px solid #e94560; border-radius: 10px;
+            background: rgba(0,0,0,0.7); pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        /* Leaderboard */
+        #leaderboard {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(26, 26, 46, 0.9); color: white;
+            padding: 15px; border-radius: 10px; min-width: 200px;
+            border: 2px solid #e94560; max-height: 400px; overflow-y: auto;
+            pointer-events: auto;
+        }
+        #leaderboard h3 {
+            margin: 0 0 10px 0; color: #e94560; font-size: 18px;
+        }
+        .leaderboard-entry {
+            padding: 8px; margin: 5px 0; background: rgba(15, 52, 96, 0.5);
+            border-radius: 5px; display: flex; justify-content: space-between;
+            font-size: 14px;
+        }
+        .leaderboard-entry.current-player {
+            background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+            font-weight: bold;
+        }
+
+        /* Respawn Overlay */
+        #respawnOverlay {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); background: rgba(0,0,0,0.9);
+            padding: 40px 60px; border-radius: 20px; text-align: center;
+            border: 3px solid #666; box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            z-index: 5000; color: white;
+        }
+        #respawnOverlay h2 {
+            color: #888; margin-bottom: 20px; font-size: 2em;
+        }
+        #respawnOverlay .countdown {
+            font-size: 4em; color: #e94560; font-weight: bold;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
@@ -162,6 +207,23 @@
         </div>
     </div>
 
+    <!-- Minimap -->
+    <canvas id="minimap" width="150" height="150"></canvas>
+
+    <!-- Leaderboard -->
+    <div id="leaderboard">
+        <h3>🏆 Top Players</h3>
+        <div id="leaderboardList"></div>
+    </div>
+
+    <!-- Respawn Overlay -->
+    <div id="respawnOverlay" style="display:none;">
+        <h2>☠️ SENT TO THE GRAVEYARD! ☠️</h2>
+        <div class="countdown" id="respawnCountdown">15</div>
+        <p>🪦 Waiting to respawn... 🪦</p>
+        <p style="font-size: 14px; margin-top: 10px; color: #888;">You can still move around the graveyard!</p>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
@@ -191,8 +253,27 @@
         const mouse = { x: 0, y: 0 };
         
         // Constants
+        const WORLD_WIDTH = 4000;
+        const WORLD_HEIGHT = 4000;
         const SPEED = 5;
         const PLAYER_SIZE = 40;
+        const COLLISION_DISTANCE = 60;
+        const RESPAWN_TIME = 15000; // 15 seconds
+        
+        // Graveyard Safe Zone (center of map)
+        const GRAVEYARD = {
+            x: WORLD_WIDTH / 2,
+            y: WORLD_HEIGHT / 2,
+            width: 600,
+            height: 500
+        };
+        
+        // Camera
+        const camera = { x: 0, y: 0 };
+        
+        // Respawn state
+        let isRespawning = false;
+        let respawnTimer = 0;
         
         // Accessibility State
         let settings = { dyslexia: false, contrast: false, motion: true };
@@ -206,14 +287,36 @@
             { q: "What writing system did they use?", a: ["Undeciphered Script", "Hieroglyphs", "Cuneiform"], c: 0 },
             { q: "What material were their seals made of?", a: ["Steatite (Stone)", "Gold", "Plastic"], c: 0 },
             { q: "Did they have a sewage system?", a: ["Yes, advanced drainage", "No", "Only for kings"], c: 0 },
-            { q: "Why is India called a subcontinent?", a: ["It's a large landmass separated by mountains", "It's smaller than other continents", "It has many religions", "It was discovered late"], c: 0 },
-            { q: "Who founded the Maurya Empire?", a: ["Chandragupta Maurya", "Ashoka", "Kautilya", "Alexander the Great"], c: 0 },
-            { q: "What was Kautilya famous for writing?", a: ["Arthashastra (book on government)", "The Vedas", "Poetry", "Religious texts"], c: 0 },
-            { q: "How did Chandragupta defeat the Nanda Dynasty?", a: ["With Kautilya's help and strategy", "With magic powers", "Through marriage", "He didn't defeat them"], c: 0 },
-            { q: "What was the capital of the Maurya Empire?", a: ["Pataliputra", "Delhi", "Mohenjo-Daro", "Babylon"], c: 0 },
-            { q: "Which mountains separate India from the rest of Asia?", a: ["Himalayas", "Rocky Mountains", "Alps", "Andes"], c: 0 },
-            { q: "What did Kautilya advise rulers to have?", a: ["Spies and a strong army", "Only priests", "No government", "Foreign allies only"], c: 0 }
+            
+            // Maurya Empire & Indian Geography
+            { q: "Why is India called a subcontinent?", a: ["It's a large landmass separated by mountains", "It has many religions", "It's smaller than other continents"], c: 0 },
+            { q: "Who founded the Maurya Empire?", a: ["Chandragupta Maurya", "Ashoka", "Kautilya"], c: 0 },
+            { q: "What was Kautilya famous for writing?", a: ["Arthashastra (book on government)", "The Vedas", "Poetry"], c: 0 },
+            { q: "How did Chandragupta defeat the Nanda Dynasty?", a: ["With Kautilya's help and strategy", "With magic powers", "Through marriage"], c: 0 },
+            { q: "What was the capital of the Maurya Empire?", a: ["Pataliputra", "Delhi", "Mohenjo-Daro"], c: 0 },
+            { q: "Which mountains separate India from the rest of Asia?", a: ["Himalayas", "Rocky Mountains", "Alps"], c: 0 },
+            { q: "What did Kautilya advise rulers to have?", a: ["Spies and a strong army", "Only priests", "No government"], c: 0 }
         ];
+
+        // Military Ranks
+        const MILITARY_RANKS = [
+            { min: 0, name: "Private", badge: "🔰" },
+            { min: 1, name: "Corporal", badge: "⚔️" },
+            { min: 3, name: "Sergeant", badge: "🛡️" },
+            { min: 5, name: "Lieutenant", badge: "⭐" },
+            { min: 8, name: "Captain", badge: "🌟" },
+            { min: 12, name: "Major", badge: "💫" },
+            { min: 15, name: "Colonel", badge: "🎖️" },
+            { min: 20, name: "General", badge: "👑" },
+            { min: 30, name: "Supreme Commander", badge: "🏆" }
+        ];
+
+        function getRank(knockouts) {
+            for (let i = MILITARY_RANKS.length - 1; i >= 0; i--) {
+                if (knockouts >= MILITARY_RANKS[i].min) return MILITARY_RANKS[i];
+            }
+            return MILITARY_RANKS[0];
+        }
 
         // ===================================================================
         // 2. SOCKET.IO EVENTS (The "Phone Line" to Server)
@@ -268,20 +371,32 @@
         });
 
         // Battle Request Received
-        socket.on('battleInvite', (data) => {
-            // You are being attacked!
-            showQuiz(data);
+        // Battle Started (from server)
+        socket.on('battleStarted', (data) => {
+            console.log('Battle started:', data);
+            
+            // Check if I'm involved in this battle
+            if (data.battleData.initiator === myId || data.battleData.target === myId) {
+                // Pass the question and battleId to showQuiz
+                showQuiz({
+                    battleId: data.battleId,
+                    question: data.battleData.question,
+                    opponent: data.battleData.initiator === myId ? data.battleData.target : data.battleData.initiator
+                });
+            }
         });
 
         // Battle Result
         socket.on('battleResult', (data) => {
+            console.log('Battle result:', data);
             closeQuiz();
+            
             if (data.winner === myId) {
                 myPlayer.knockouts++;
                 alert("🎉 VICTORY! You won the battle!");
             } else if (data.loser === myId) {
                 respawn();
-                alert("💀 DEFEATED! You have been respawned.");
+                alert("💀 DEFEATED! You have been sent to the graveyard!");
             }
         });
 
@@ -302,9 +417,11 @@
             myPlayer.name = nameInput;
             myPlayer.room = roomSelect;
             
-            // Random Start Position
-            myPlayer.x = Math.random() * (canvas.width - 100) + 50;
-            myPlayer.y = Math.random() * (canvas.height - 100) + 50;
+            // Random Start Position (not in graveyard)
+            do {
+                myPlayer.x = 200 + Math.random() * (WORLD_WIDTH - 400);
+                myPlayer.y = 200 + Math.random() * (WORLD_HEIGHT - 400);
+            } while (isInGraveyard(myPlayer.x, myPlayer.y));
 
             // Join the Server Room
             socket.emit('joinRoom', {
@@ -322,34 +439,184 @@
             requestAnimationFrame(gameLoop);
         }
 
+        // ===================================================================
+        // GRAVEYARD & MINIMAP FUNCTIONS
+        // ===================================================================
+        
+        function isInGraveyard(x, y) {
+            return x > GRAVEYARD.x - GRAVEYARD.width/2 &&
+                   x < GRAVEYARD.x + GRAVEYARD.width/2 &&
+                   y > GRAVEYARD.y - GRAVEYARD.height/2 &&
+                   y < GRAVEYARD.y + GRAVEYARD.height/2;
+        }
+
+        function drawGraveyard() {
+            const gx = GRAVEYARD.x - camera.x;
+            const gy = GRAVEYARD.y - camera.y;
+            
+            // Dark ground
+            ctx.fillStyle = 'rgba(40, 40, 50, 0.8)';
+            ctx.fillRect(gx - GRAVEYARD.width/2, gy - GRAVEYARD.height/2, GRAVEYARD.width, GRAVEYARD.height);
+            
+            // Border
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(gx - GRAVEYARD.width/2, gy - GRAVEYARD.height/2, GRAVEYARD.width, GRAVEYARD.height);
+            
+            // Sign
+            ctx.font = 'bold 24px Arial';
+            ctx.fillStyle = '#888';
+            ctx.textAlign = 'center';
+            ctx.fillText('☠️ GRAVEYARD ☠️', gx, gy - GRAVEYARD.height/2 + 30);
+            ctx.fillText('🛡️ SAFE ZONE 🛡️', gx, gy - GRAVEYARD.height/2 + 60);
+            
+            // Gravestones
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8;
+                const radius = GRAVEYARD.width / 3;
+                const sx = gx + Math.cos(angle) * radius;
+                const sy = gy + Math.sin(angle) * radius;
+                ctx.font = '30px Arial';
+                ctx.fillText('🪦', sx, sy);
+            }
+        }
+
+        function updateMinimap() {
+            const minimapCanvas = document.getElementById('minimap');
+            const minimapCtx = minimapCanvas.getContext('2d');
+            const scale = 150 / WORLD_WIDTH;
+            
+            minimapCtx.clearRect(0, 0, 150, 150);
+            minimapCtx.fillStyle = 'rgba(26, 26, 46, 0.8)';
+            minimapCtx.fillRect(0, 0, 150, 150);
+            
+            // Draw graveyard
+            minimapCtx.fillStyle = 'rgba(80, 80, 100, 0.8)';
+            minimapCtx.fillRect(
+                (GRAVEYARD.x - GRAVEYARD.width/2) * scale,
+                (GRAVEYARD.y - GRAVEYARD.height/2) * scale,
+                GRAVEYARD.width * scale,
+                GRAVEYARD.height * scale
+            );
+            
+            // Draw my player
+            minimapCtx.fillStyle = '#e94560';
+            minimapCtx.beginPath();
+            minimapCtx.arc(myPlayer.x * scale, myPlayer.y * scale, 4, 0, Math.PI * 2);
+            minimapCtx.fill();
+            
+            // Draw others
+            Object.values(otherPlayers).forEach(p => {
+                minimapCtx.fillStyle = isInGraveyard(p.x, p.y) ? '#888' : '#4ECDC4';
+                minimapCtx.beginPath();
+                minimapCtx.arc(p.x * scale, p.y * scale, 3, 0, Math.PI * 2);
+                minimapCtx.fill();
+            });
+            
+            // Border
+            minimapCtx.strokeStyle = '#e94560';
+            minimapCtx.lineWidth = 2;
+            minimapCtx.strokeRect(0, 0, 150, 150);
+        }
+
+        function updateLeaderboard() {
+            const allPlayers = [myPlayer, ...Object.values(otherPlayers)];
+            const sorted = allPlayers.sort((a, b) => b.knockouts - a.knockouts).slice(0, 10);
+            
+            const html = sorted.map((p, i) => {
+                const rank = getRank(p.knockouts);
+                const isMe = p.id === myId || p === myPlayer;
+                const className = isMe ? 'leaderboard-entry current-player' : 'leaderboard-entry';
+                return `<div class="${className}">
+                    <span>${rank.badge} ${p.name}</span>
+                    <span>${p.knockouts} KO</span>
+                </div>`;
+            }).join('');
+            
+            document.getElementById('leaderboardList').innerHTML = html;
+        }
+
+        function updateCamera() {
+            camera.x = myPlayer.x - canvas.width / 2;
+            camera.y = myPlayer.y - canvas.height / 2;
+        }
+
         function gameLoop() {
             if (!gameStarted) return;
 
-            // 1. Move
-            handleMovement();
+            // 1. Handle respawn
+            if (isRespawning) {
+                const timeLeft = Math.ceil((RESPAWN_TIME - (Date.now() - respawnTimer)) / 1000);
+                document.getElementById('respawnCountdown').textContent = Math.max(0, timeLeft);
+                
+                if (Date.now() - respawnTimer >= RESPAWN_TIME) {
+                    isRespawning = false;
+                    document.getElementById('respawnOverlay').style.display = 'none';
+                    // Respawn outside graveyard
+                    do {
+                        myPlayer.x = 200 + Math.random() * (WORLD_WIDTH - 400);
+                        myPlayer.y = 200 + Math.random() * (WORLD_HEIGHT - 400);
+                    } while (isInGraveyard(myPlayer.x, myPlayer.y));
+                }
+            }
 
-            // 2. Draw Background
+            // 2. Move
+            if (!isRespawning) {
+                handleMovement();
+            } else {
+                // Can move in graveyard while waiting
+                let dx = 0, dy = 0;
+                if (keys['ArrowUp'] || keys['KeyW']) dy = -SPEED;
+                if (keys['ArrowDown'] || keys['KeyS']) dy = SPEED;
+                if (keys['ArrowLeft'] || keys['KeyA']) dx = -SPEED;
+                if (keys['ArrowRight'] || keys['KeyD']) dx = SPEED;
+                
+                myPlayer.x += dx;
+                myPlayer.y += dy;
+                
+                // Keep in graveyard
+                myPlayer.x = Math.max(GRAVEYARD.x - GRAVEYARD.width/2 + 30, 
+                                     Math.min(GRAVEYARD.x + GRAVEYARD.width/2 - 30, myPlayer.x));
+                myPlayer.y = Math.max(GRAVEYARD.y - GRAVEYARD.height/2 + 30,
+                                     Math.min(GRAVEYARD.y + GRAVEYARD.height/2 - 30, myPlayer.y));
+            }
+
+            // 3. Update camera
+            updateCamera();
+
+            // 4. Draw Background
             ctx.fillStyle = settings.contrast ? '#000' : '#1a1a2e';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             drawGrid();
+            drawGraveyard();
 
-            // 3. Draw Others
+            // 5. Draw Others
             Object.keys(otherPlayers).forEach(id => {
                 const p = otherPlayers[id];
-                drawEmojiPlayer(p.x, p.y, p.emoji, p.name, false);
+                const screenX = p.x - camera.x;
+                const screenY = p.y - camera.y;
+                const rank = getRank(p.knockouts);
+                drawEmojiPlayer(screenX, screenY, p.emoji, `${rank.badge} ${p.name}`, false);
             });
 
-            // 4. Draw Me
-            drawEmojiPlayer(myPlayer.x, myPlayer.y, myPlayer.emoji, myPlayer.name, true);
+            // 6. Draw Me
+            const screenX = myPlayer.x - camera.x;
+            const screenY = myPlayer.y - camera.y;
+            const myRank = getRank(myPlayer.knockouts);
+            const displayName = isRespawning ? '👻 Ghost' : `${myRank.badge} ${myPlayer.name}`;
+            drawEmojiPlayer(screenX, screenY, myPlayer.emoji, displayName, true);
 
-            // 5. HUD Update
-            document.getElementById('score-display').innerText = `🏆 Knockouts: ${myPlayer.knockouts}`;
+            // 7. Update UI
+            document.getElementById('score-display').innerText = `🏆 Knockouts: ${myPlayer.knockouts} | ${myRank.name}`;
+            updateMinimap();
+            updateLeaderboard();
 
-            // 6. Send Update to Server (Throttle this in a real pro game, but ok for now)
+            // 8. Send Update to Server
             socket.emit('updatePlayer', {
                 x: myPlayer.x,
                 y: myPlayer.y,
-                knockouts: myPlayer.knockouts
+                knockouts: myPlayer.knockouts,
+                inGraveyard: isRespawning
             });
 
             requestAnimationFrame(gameLoop);
@@ -364,12 +631,14 @@
             if (keys['ArrowLeft'] || keys['KeyA']) dx = -SPEED;
             if (keys['ArrowRight'] || keys['KeyD']) dx = SPEED;
 
-            // Boundary Checks
-            if (myPlayer.x + dx > 0 && myPlayer.x + dx < canvas.width) myPlayer.x += dx;
-            if (myPlayer.y + dy > 0 && myPlayer.y + dy < canvas.height) myPlayer.y += dy;
+            // Move and keep in world bounds
+            myPlayer.x += dx;
+            myPlayer.y += dy;
+            
+            myPlayer.x = Math.max(50, Math.min(WORLD_WIDTH - 50, myPlayer.x));
+            myPlayer.y = Math.max(50, Math.min(WORLD_HEIGHT - 50, myPlayer.y));
 
             // Collision Check (Trigger Battle)
-            // Only the moving player triggers the battle to avoid double-triggers
             if (dx !== 0 || dy !== 0) {
                 checkCollisions();
             }
@@ -378,14 +647,23 @@
         // Throttle battles so they don't spam
         let lastBattleTime = 0;
         function checkCollisions() {
+            if (isRespawning) return; // Can't battle while respawning
+            
             const now = Date.now();
             if (now - lastBattleTime < 3000) return; // 3 second cooldown
+            
+            // No battles in graveyard!
+            if (isInGraveyard(myPlayer.x, myPlayer.y)) return;
 
             Object.keys(otherPlayers).forEach(id => {
                 const p = otherPlayers[id];
+                
+                // Don't attack players in graveyard
+                if (p.inGraveyard || isInGraveyard(p.x, p.y)) return;
+                
                 const dist = Math.hypot(myPlayer.x - p.x, myPlayer.y - p.y);
                 
-                if (dist < PLAYER_SIZE) {
+                if (dist < COLLISION_DISTANCE) {
                     // COLLISION! Start Battle
                     lastBattleTime = now;
                     console.log("Collision with", p.name);
@@ -430,18 +708,37 @@
         function drawGrid() {
             ctx.strokeStyle = 'rgba(255,255,255,0.05)';
             ctx.lineWidth = 1;
-            const size = 50;
-            for (let x = 0; x < canvas.width; x += size) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            const size = 100;
+            
+            const startX = Math.floor(camera.x / size) * size;
+            const startY = Math.floor(camera.y / size) * size;
+            
+            for (let x = startX; x < camera.x + canvas.width; x += size) {
+                ctx.beginPath();
+                ctx.moveTo(x - camera.x, 0);
+                ctx.lineTo(x - camera.x, canvas.height);
+                ctx.stroke();
             }
-            for (let y = 0; y < canvas.height; y += size) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            
+            for (let y = startY; y < camera.y + canvas.height; y += size) {
+                ctx.beginPath();
+                ctx.moveTo(0, y - camera.y);
+                ctx.lineTo(canvas.width, y - camera.y);
+                ctx.stroke();
             }
         }
 
         function respawn() {
-            myPlayer.x = Math.random() * (canvas.width - 100) + 50;
-            myPlayer.y = Math.random() * (canvas.height - 100) + 50;
+            // Send to graveyard
+            myPlayer.x = GRAVEYARD.x;
+            myPlayer.y = GRAVEYARD.y;
+            myPlayer.knockouts = 0; // Reset knockouts on death
+            
+            // Start respawn timer
+            isRespawning = true;
+            respawnTimer = Date.now();
+            document.getElementById('respawnOverlay').style.display = 'block';
+            document.getElementById('respawnCountdown').textContent = '15';
         }
 
         // ===================================================================
@@ -476,11 +773,21 @@
         }
 
         function submitAnswer(battleId, answerIndex) {
+            // Send answer to server
             socket.emit('answerBattle', {
                 battleId: battleId,
                 answerIndex: answerIndex
             });
-            document.getElementById('quizModal').style.display = 'none';
+            
+            // Disable all buttons while waiting
+            const buttons = document.querySelectorAll('.quiz-btn');
+            buttons.forEach(btn => {
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
+            });
+            
+            // Show waiting message
+            document.getElementById('quizQuestion').innerText = 'Waiting for opponent...';
         }
 
         function closeQuiz() {
