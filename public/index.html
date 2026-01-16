@@ -3,39 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emoji Battle - Multiplayer Arena</title>
+    <title>Indus Valley Emoji Battle - Multiplayer Arena</title>
     <link href="https://fonts.googleapis.com/css2?family=OpenDyslexic&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            overflow: hidden;
-            background: #1a1a2e;
-        }
-
-        body.dyslexia-font {
-            font-family: 'OpenDyslexic', 'Arial', sans-serif !important;
-        }
-
-        body.dyslexia-font * {
-            font-family: 'OpenDyslexic', 'Arial', sans-serif !important;
-        }
-
-        body.high-contrast {
-            background: #000;
-            color: #fff;
-        }
-
-        body.high-contrast #startMenu {
-            background: #000;
-            border: 3px solid #fff;
-            color: #fff;
-        }
+        /* --- ORIGINAL STYLES PRESERVED --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; overflow: hidden; background: #1a1a2e; }
+        
+        /* Accessibility Modes */
+        body.dyslexia-font, body.dyslexia-font * { font-family: 'OpenDyslexic', 'Arial', sans-serif !important; }
+        body.high-contrast { background: #000; color: #fff; }
+        body.high-contrast #startMenu { background: #000; border: 3px solid #fff; color: #fff; }
 
         #gameCanvas {
             display: block;
@@ -43,1577 +21,694 @@
             cursor: crosshair;
         }
 
-        body.high-contrast #gameCanvas {
-            background: #000;
+        /* UI Overlay */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        
+        /* HUD */
+        #hud {
+            position: absolute; top: 20px; left: 20px;
+            color: white; font-size: 20px; font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            pointer-events: auto;
         }
 
+        /* Accessibility Controls */
+        #a11y-controls {
+            position: absolute; top: 20px; right: 20px;
+            display: flex; gap: 10px; pointer-events: auto;
+        }
+        .a11y-btn {
+            background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255,255,255,0.5);
+            color: white; padding: 8px 12px; cursor: pointer; border-radius: 8px;
+            font-size: 14px; transition: all 0.2s;
+        }
+        .a11y-btn:hover { background: rgba(255, 255, 255, 0.4); transform: scale(1.05); }
+
+        /* Start Menu */
         #startMenu {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 60px rgba(233, 69, 96, 0.2);
-            text-align: center;
-            z-index: 1000;
-            max-width: 650px;
-            max-height: 90vh;
-            overflow-y: auto;
-            border: 2px solid #e94560;
-            color: #fff;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 20px;
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 500px; width: 90%; pointer-events: auto; z-index: 100;
         }
-
-        #startMenu h1 {
-            color: #e94560;
-            margin-bottom: 10px;
-            font-size: 42px;
-            text-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+        h1 { color: #e94560; margin-bottom: 20px; font-size: 2.5em; text-shadow: 2px 2px 0px #000; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+        input[type="text"], select {
+            width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ddd;
+            border-radius: 8px; margin-bottom: 10px;
         }
-
-        #startMenu .subtitle {
-            color: #0f3460;
-            background: #e94560;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            margin-bottom: 20px;
-            display: inline-block;
-        }
-
-        #startMenu input[type="text"] {
-            padding: 15px;
-            font-size: 18px;
-            border: 2px solid #e94560;
-            border-radius: 10px;
-            width: 100%;
-            max-width: 300px;
-            margin-bottom: 15px;
-            background: #0f3460;
-            color: #fff;
-        }
-
-        #startMenu input[type="text"]::placeholder {
-            color: #888;
-        }
-
-        #startMenu button {
-            padding: 15px 40px;
-            font-size: 20px;
-            background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin: 5px;
-            font-weight: bold;
-        }
-
-        #startMenu button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(233, 69, 96, 0.5);
-        }
-
-        .accessibility-panel {
-            background: rgba(15, 52, 96, 0.5);
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-            text-align: left;
-            border: 1px solid #e94560;
-        }
-
-        .accessibility-panel h3 {
-            color: #e94560;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .accessibility-option {
-            margin: 12px 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .accessibility-option input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-            accent-color: #e94560;
-        }
-
-        .accessibility-option label {
-            cursor: pointer;
-            font-size: 16px;
-            color: #ddd;
-        }
-
-        select {
-            padding: 10px;
-            font-size: 16px;
-            border: 2px solid #e94560;
-            border-radius: 8px;
-            background: #0f3460;
-            color: #fff;
-            cursor: pointer;
-        }
-
-        /* Emoji Picker */
-        .emoji-picker {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 10px;
-            margin: 20px 0;
-            padding: 15px;
-            background: rgba(15, 52, 96, 0.5);
-            border-radius: 10px;
-            border: 1px solid #e94560;
-        }
-
-        .emoji-picker h3 {
-            width: 100%;
-            color: #e94560;
-            margin-bottom: 10px;
-        }
-
+        
+        /* Emoji Selection */
+        .emoji-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
         .emoji-option {
-            font-size: 40px;
-            padding: 10px;
-            cursor: pointer;
-            border-radius: 10px;
-            border: 3px solid transparent;
-            transition: all 0.2s;
-            background: rgba(0,0,0,0.3);
+            font-size: 24px; cursor: pointer; padding: 10px; border-radius: 50%;
+            border: 2px solid transparent; transition: transform 0.2s; background: #f0f0f0;
+        }
+        .emoji-option:hover { transform: scale(1.2); background: #fff; }
+        .emoji-option.selected { border-color: #e94560; background: #ffd1d1; transform: scale(1.1); }
+
+        #startButton {
+            background: #e94560; color: white; border: none; padding: 15px 40px;
+            font-size: 20px; border-radius: 50px; cursor: pointer;
+            transition: transform 0.1s, background 0.2s; width: 100%; font-weight: bold;
+        }
+        #startButton:hover { background: #ff2e63; transform: scale(1.02); }
+        #startButton:active { transform: scale(0.98); }
+
+        /* Connection Status */
+        #connection-status {
+            margin-top: 10px; font-size: 12px; color: #666;
         }
 
-        .emoji-option:hover {
-            transform: scale(1.2);
-            background: rgba(233, 69, 96, 0.3);
+        /* Quiz Modal */
+        #quizModal {
+            display: none; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); background: white; padding: 30px;
+            border-radius: 15px; width: 90%; max-width: 450px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.7); border: 4px solid #e94560;
+            z-index: 200; text-align: center; pointer-events: auto;
+        }
+        .quiz-question { font-size: 20px; margin-bottom: 20px; color: #333; font-weight: bold; }
+        .quiz-options { display: flex; flex-direction: column; gap: 10px; }
+        .quiz-btn {
+            background: #f0f0f0; border: 2px solid #ddd; padding: 15px;
+            border-radius: 10px; cursor: pointer; font-size: 16px; transition: all 0.2s;
+        }
+        .quiz-btn:hover { background: #e0e0e0; border-color: #999; }
+        .quiz-timer {
+            height: 10px; background: #eee; margin-top: 20px; border-radius: 5px; overflow: hidden;
+        }
+        .quiz-timer-bar {
+            height: 100%; background: #e94560; width: 100%; transition: width 1s linear;
         }
 
-        .emoji-option.selected {
-            border-color: #e94560;
-            background: rgba(233, 69, 96, 0.4);
-            transform: scale(1.15);
+        /* Minimap */
+        #minimap {
+            position: absolute; bottom: 20px; right: 20px;
+            border: 3px solid #e94560; border-radius: 10px;
+            background: rgba(0,0,0,0.7); pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
-        #leaderboard, #stats {
-            position: absolute;
-            background: rgba(26, 26, 46, 0.95);
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            z-index: 100;
-            border: 2px solid #e94560;
-            color: #fff;
-        }
-
-        body.high-contrast #leaderboard,
-        body.high-contrast #stats {
-            background: rgba(0, 0, 0, 0.95);
-            border: 2px solid #fff;
-            color: #fff;
-        }
-
+        /* Leaderboard */
         #leaderboard {
-            top: 20px;
-            right: 20px;
-            min-width: 250px;
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(26, 26, 46, 0.9); color: white;
+            padding: 15px; border-radius: 10px; min-width: 200px;
+            border: 2px solid #e94560; max-height: 400px; overflow-y: auto;
+            pointer-events: auto;
         }
-
-        #stats {
-            top: 20px;
-            left: 20px;
+        #leaderboard h3 {
+            margin: 0 0 10px 0; color: #e94560; font-size: 18px;
         }
-
-        #leaderboard h2 {
-            color: #e94560;
-            margin-bottom: 15px;
-            font-size: 20px;
-            border-bottom: 2px solid #e94560;
-            padding-bottom: 10px;
-        }
-
-        body.high-contrast #leaderboard h2,
-        body.high-contrast #stats h3 {
-            color: #fff;
-            border-bottom-color: #fff;
-        }
-
         .leaderboard-entry {
-            padding: 10px;
-            margin: 5px 0;
-            background: rgba(15, 52, 96, 0.5);
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 8px; margin: 5px 0; background: rgba(15, 52, 96, 0.5);
+            border-radius: 5px; display: flex; justify-content: space-between;
             font-size: 14px;
         }
-
-        body.high-contrast .leaderboard-entry {
-            background: #333;
-            color: #fff;
-        }
-
         .leaderboard-entry.current-player {
             background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
-            color: white;
             font-weight: bold;
-        }
-
-        body.high-contrast .leaderboard-entry.current-player {
-            background: #fff;
-            color: #000;
-        }
-
-        #stats h3 {
-            color: #e94560;
-            margin-bottom: 10px;
-        }
-
-        .stat-item {
-            margin: 8px 0;
-            font-size: 16px;
-            color: #ddd;
-        }
-
-        .stat-item strong {
-            color: #e94560;
-        }
-
-        #instructions {
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(15, 52, 96, 0.5);
-            border-radius: 10px;
-            text-align: left;
-            border: 1px solid #e94560;
-        }
-
-        #instructions h3 {
-            color: #e94560;
-            margin-bottom: 10px;
-        }
-
-        #instructions ul {
-            margin-left: 20px;
-            color: #ddd;
-        }
-
-        #instructions li {
-            margin: 8px 0;
-            line-height: 1.4;
-        }
-
-        #minimap {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 150px;
-            height: 150px;
-            background: rgba(26, 26, 46, 0.9);
-            border: 3px solid #e94560;
-            border-radius: 10px;
-            z-index: 100;
-        }
-
-        body.high-contrast #minimap {
-            background: rgba(0, 0, 0, 0.9);
-            border-color: #fff;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .speaker-icon {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            background: #e94560;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 24px;
-            color: white;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .speaker-icon:hover {
-            background: #ff6b6b;
         }
 
         /* Respawn Overlay */
         #respawnOverlay {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.85);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9000;
-            color: #fff;
-            padding: 40px 60px;
-            border-radius: 20px;
-            border: 3px solid #666;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); background: rgba(0,0,0,0.9);
+            padding: 40px 60px; border-radius: 20px; text-align: center;
+            border: 3px solid #666; box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            z-index: 5000; color: white;
         }
-
         #respawnOverlay h2 {
-            font-size: 36px;
-            color: #888;
-            margin-bottom: 20px;
-            text-shadow: 0 0 20px rgba(100, 100, 100, 0.5);
+            color: #888; margin-bottom: 20px; font-size: 2em;
         }
-
         #respawnOverlay .countdown {
-            font-size: 72px;
-            color: #aaa;
+            font-size: 4em; color: #e94560; font-weight: bold;
             margin: 20px 0;
-            text-shadow: 0 0 30px rgba(150, 150, 150, 0.5);
-        }
-
-        #respawnOverlay p {
-            font-size: 18px;
-            color: #999;
-        }
-
-        /* Quiz Battle Overlay */
-        #quizBattleOverlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .quiz-battle-container {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 700px;
-            width: 95%;
-            border: 3px solid #e94560;
-            box-shadow: 0 0 60px rgba(233, 69, 96, 0.5);
-        }
-
-        .quiz-battle-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #e94560;
-        }
-
-        .quiz-player {
-            text-align: center;
-            flex: 1;
-        }
-
-        .quiz-player .emoji {
-            font-size: 50px;
-        }
-
-        .quiz-player .name {
-            color: #fff;
-            font-size: 16px;
-            margin-top: 5px;
-        }
-
-        .quiz-vs {
-            font-size: 36px;
-            color: #e94560;
-            font-weight: bold;
-            padding: 0 20px;
-            text-shadow: 0 0 20px rgba(233, 69, 96, 0.8);
-        }
-
-        .quiz-timer {
-            font-size: 48px;
-            text-align: center;
-            color: #fff;
-            margin: 15px 0;
-        }
-
-        .quiz-timer.urgent {
-            color: #ff4444;
-            animation: pulse 0.5s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .quiz-question {
-            background: rgba(15, 52, 96, 0.5);
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            color: #fff;
-            font-size: 20px;
-            text-align: center;
-            line-height: 1.5;
-        }
-
-        .quiz-answers {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .quiz-answer {
-            padding: 15px 20px;
-            background: rgba(15, 52, 96, 0.8);
-            border: 2px solid #e94560;
-            border-radius: 10px;
-            color: #fff;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-        }
-
-        .quiz-answer:hover {
-            background: rgba(233, 69, 96, 0.4);
-            transform: scale(1.02);
-        }
-
-        .quiz-answer.correct {
-            background: #2ecc71;
-            border-color: #27ae60;
-        }
-
-        .quiz-answer.incorrect {
-            background: #e74c3c;
-            border-color: #c0392b;
-        }
-
-        .quiz-answer.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .quiz-result {
-            text-align: center;
-            padding: 20px;
-            font-size: 28px;
-            color: #fff;
-        }
-
-        .quiz-result.winner {
-            color: #2ecc71;
-        }
-
-        .quiz-result.loser {
-            color: #e74c3c;
-        }
-
-        @keyframes popIn {
-            0% { transform: translate(-50%, -50%) scale(0); }
-            50% { transform: translate(-50%, -50%) scale(1.2); }
-            100% { transform: translate(-50%, -50%) scale(1); }
-        }
-
-        @keyframes knockoutFlash {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        /* Rank badge styles */
-        .rank-badge {
-            font-size: 12px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            margin-right: 5px;
         }
     </style>
 </head>
 <body>
+
     <canvas id="gameCanvas"></canvas>
-    
-    <div id="startMenu">
-        <h1>⚔️ Emoji Battle</h1>
-        <div class="subtitle">Ancient History Challenge Arena</div>
+
+    <div id="ui-layer">
         
-        <!-- Accessibility Features -->
-        <div class="accessibility-panel">
-            <h3>
-                🎮 Helpful Tools
-                <span class="speaker-icon" onclick="speakText('Helpful Tools panel. Customize the game to work best for you.')" title="Read aloud">🔊</span>
-            </h3>
-            
-            <div class="accessibility-option">
-                <input type="checkbox" id="dyslexiaFont">
-                <label for="dyslexiaFont">
-                    Easy-Read Font
-                    <span class="speaker-icon" onclick="speakText('Enable easy-read font with clearer letter shapes')" title="Read aloud">🔊</span>
-                </label>
-            </div>
-            
-            <div class="accessibility-option">
-                <input type="checkbox" id="highContrast">
-                <label for="highContrast">
-                    High Contrast Colors
-                    <span class="speaker-icon" onclick="speakText('Enable high contrast black and white colors for easier viewing')" title="Read aloud">🔊</span>
-                </label>
-            </div>
-            
-            <div class="accessibility-option">
-                <input type="checkbox" id="textToSpeech" checked>
-                <label for="textToSpeech">
-                    Read Text Aloud
-                    <span class="speaker-icon" onclick="speakText('Turn on automatic reading of game text out loud')" title="Read aloud">🔊</span>
-                </label>
-            </div>
-            
-            <div class="accessibility-option">
-                <input type="checkbox" id="largerText">
-                <label for="largerText">
-                    Bigger Text
-                    <span class="speaker-icon" onclick="speakText('Make all text bigger and easier to read')" title="Read aloud">🔊</span>
-                </label>
-            </div>
+        <div id="a11y-controls">
+            <button class="a11y-btn" onclick="toggleDyslexia()">Dyslexia Font</button>
+            <button class="a11y-btn" onclick="toggleContrast()">High Contrast</button>
+            <button class="a11y-btn" onclick="toggleMotion()">Reduce Motion</button>
         </div>
 
-        <!-- Emoji Picker -->
-        <div class="emoji-picker">
-            <h3>🎯 Choose Your Fighter!</h3>
-            <div class="emoji-option" data-emoji="😎">😎</div>
-            <div class="emoji-option" data-emoji="🤠">🤠</div>
-            <div class="emoji-option" data-emoji="👽">👽</div>
-            <div class="emoji-option" data-emoji="🤖">🤖</div>
-            <div class="emoji-option" data-emoji="👻">👻</div>
-            <div class="emoji-option" data-emoji="🦊">🦊</div>
-            <div class="emoji-option" data-emoji="🐲">🐲</div>
-            <div class="emoji-option" data-emoji="🦁">🦁</div>
-            <div class="emoji-option" data-emoji="🐼">🐼</div>
-            <div class="emoji-option" data-emoji="🦄">🦄</div>
-            <div class="emoji-option selected" data-emoji="⭐">⭐</div>
-            <div class="emoji-option" data-emoji="🔥">🔥</div>
-            <div class="emoji-option" data-emoji="💎">💎</div>
-            <div class="emoji-option" data-emoji="🎃">🎃</div>
-            <div class="emoji-option" data-emoji="🌟">🌟</div>
-            <div class="emoji-option" data-emoji="💀">💀</div>
+        <div id="hud" style="display: none;">
+            <div id="score-display">🏆 Knockouts: 0</div>
+            <div id="room-display">📍 Room: Lobby</div>
+            <div id="leaderboard-display" style="font-size: 14px; margin-top: 10px; opacity: 0.8;"></div>
         </div>
 
-        <input type="text" id="playerName" placeholder="Enter your name" maxlength="20" />
-        
-        <div style="margin: 20px 0;">
-            <label style="font-size: 18px; color: #e94560; font-weight: bold;">Choose Your Arena:</label>
-            <select id="roomSelect" style="width: 100%; max-width: 300px; padding: 15px; font-size: 18px; margin-top: 10px;">
-                <option value="arena-a">⚔️ Arena A (Players: 0)</option>
-                <option value="arena-b">🏟️ Arena B (Players: 0)</option>
-                <option value="arena-c">🎪 Arena C (Players: 0)</option>
-                <option value="arena-d">🏰 Arena D (Players: 0)</option>
-            </select>
+        <div id="startMenu">
+            <h1>🛡️ Indus Battle</h1>
+            
+            <div class="input-group">
+                <label for="playerName">Enter Your Name:</label>
+                <input type="text" id="playerName" placeholder="Warrior Name" maxlength="15">
+            </div>
+
+            <label>Choose Your Avatar:</label>
+            <div class="emoji-grid" id="emojiSelector">
+                </div>
+
+            <div class="input-group">
+                <label for="roomSelect">Select Arena:</label>
+                <select id="roomSelect">
+                    <option value="arena-a">Arena A (Training)</option>
+                    <option value="arena-b">Arena B (Harappa)</option>
+                    <option value="arena-c">Arena C (Mohenjo-Daro)</option>
+                    <option value="arena-d">Arena D (Citadel)</option>
+                    <option value="arena-e">Arena E (The Great Bath)</option>
+                </select>
+                <div id="room-counts" style="font-size: 12px; color: #666; margin-top: 5px;">
+                    Loading arena populations...
+                </div>
+            </div>
+
+            <button id="startButton">ENTER ARENA</button>
+            <div id="connection-status">Connecting to server...</div>
         </div>
-        
-        <button id="startButton">⚔️ Enter Battle!</button>
-        
-        <div id="instructions">
-            <h3>📜 How to Battle</h3>
-            <ul>
-                <li>🎮 Use WASD or Arrow Keys to move your emoji</li>
-                <li>💥 Collide with other players to trigger a quiz battle!</li>
-                <li>🧠 Answer the history question correctly AND first to win</li>
-                <li>🏆 Winner gets a KNOCKOUT added to their score</li>
-                <li>🪦 Loser goes to the Graveyard for 15 seconds (but keeps their rank!)</li>
-                <li>🛡️ The Graveyard (center of map) is a SAFE ZONE - no battles!</li>
-                <li>⭐ Earn military ranks as you get more knockouts!</li>
-                <li>🥇 Top 10 players shown on the leaderboard</li>
-            </ul>
+
+        <div id="quizModal">
+            <div class="quiz-question" id="quizQuestion">Question goes here?</div>
+            <div class="quiz-options" id="quizOptions">
+                </div>
+            <div class="quiz-timer">
+                <div class="quiz-timer-bar" id="timerBar"></div>
+            </div>
         </div>
     </div>
 
-    <div id="stats" class="hidden">
-        <h3>📊 Your Stats</h3>
-        <div class="stat-item">Rank: <strong id="playerRank">Private</strong></div>
-        <div class="stat-item">Knockouts: <strong id="knockoutCount">0</strong></div>
-        <div class="stat-item">Players: <strong id="playerCount">1</strong></div>
-    </div>
+    <!-- Minimap -->
+    <canvas id="minimap" width="150" height="150"></canvas>
 
-    <div id="leaderboard" class="hidden">
-        <h2>🏆 Top Fighters</h2>
+    <!-- Leaderboard -->
+    <div id="leaderboard">
+        <h3>🏆 Top Players</h3>
         <div id="leaderboardList"></div>
     </div>
 
-    <canvas id="minimap" class="hidden"></canvas>
-
-    <!-- Background Music -->
-    <audio id="bgMusic" loop>
-        <source src="1.mp3" type="audio/mpeg">
-    </audio>
-
-    <div id="respawnOverlay" class="hidden">
+    <!-- Respawn Overlay -->
+    <div id="respawnOverlay" style="display:none;">
         <h2>☠️ SENT TO THE GRAVEYARD! ☠️</h2>
         <div class="countdown" id="respawnCountdown">15</div>
         <p>🪦 Waiting to respawn... 🪦</p>
         <p style="font-size: 14px; margin-top: 10px; color: #888;">You can still move around the graveyard!</p>
     </div>
 
-    <div id="quizBattleOverlay" class="hidden">
-        <div class="quiz-battle-container">
-            <div class="quiz-battle-header">
-                <div class="quiz-player" id="quizPlayer1">
-                    <div class="emoji">⭐</div>
-                    <div class="name">Player 1</div>
-                </div>
-                <div class="quiz-vs">VS</div>
-                <div class="quiz-player" id="quizPlayer2">
-                    <div class="emoji">🔥</div>
-                    <div class="name">Player 2</div>
-                </div>
-            </div>
-            <div class="quiz-timer" id="quizTimer">10</div>
-            <div class="quiz-question" id="quizQuestion">Loading question...</div>
-            <div class="quiz-answers" id="quizAnswers"></div>
-            <div class="quiz-result hidden" id="quizResult"></div>
-        </div>
-    </div>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
 
     <script>
         // ===================================================================
-        // FIREBASE CONFIGURATION (Same as Cell Game)
+        // 1. SETUP & CONFIGURATION
         // ===================================================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyC-3Nf96W-AKn-J2gyn9krCB3n5O5iISOo",
-            authDomain: "cell-battle-game.firebaseapp.com",
-            databaseURL: "https://cell-battle-game-default-rtdb.firebaseio.com",
-            projectId: "cell-battle-game",
-            storageBucket: "cell-battle-game.firebasestorage.app",
-            messagingSenderId: "482967839438",
-            appId: "1:482967839438:web:7b291ef4b2d2bc098a269f"
+        const socket = io(); // Auto-connects to Render or Localhost
+        
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game State
+        let gameStarted = false;
+        let myId = null;
+        let myPlayer = {
+            x: 0, y: 0,
+            emoji: '🛡️',
+            name: 'Player',
+            color: '#e94560',
+            knockouts: 0,
+            room: 'arena-a'
         };
+        let otherPlayers = {}; // Stores all opponents
+        
+        // Inputs
+        const keys = {};
+        const mouse = { x: 0, y: 0 };
+        
+        // Constants
+        const WORLD_WIDTH = 4000;
+        const WORLD_HEIGHT = 4000;
+        const SPEED = 5;
+        const PLAYER_SIZE = 40;
+        const COLLISION_DISTANCE = 60;
+        const RESPAWN_TIME = 15000; // 15 seconds
+        
+        // Graveyard Safe Zone (center of map)
+        const GRAVEYARD = {
+            x: WORLD_WIDTH / 2,
+            y: WORLD_HEIGHT / 2,
+            width: 600,
+            height: 500
+        };
+        
+        // Camera
+        const camera = { x: 0, y: 0 };
+        
+        // Respawn state
+        let isRespawning = false;
+        let respawnTimer = 0;
+        
+        // Accessibility State
+        let settings = { dyslexia: false, contrast: false, motion: true };
 
-        let database;
-        let firebaseEnabled = false;
-        let quizDb = null;
-
-        try {
-            firebase.initializeApp(firebaseConfig);
-            database = firebase.database();
-            firebaseEnabled = true;
-            console.log("Firebase connected successfully!");
+        // Quiz Data (Indus Valley Civilization)
+        const INDUS_QUESTIONS = [
+            { q: "Which river was the Indus Valley Civilization built around?", a: ["Indus River", "Nile River", "Yellow River"], c: 0 },
+            { q: "What were the two main cities?", a: ["Harappa & Mohenjo-Daro", "Athens & Sparta", "Rome & Carthage"], c: 0 },
+            { q: "What was used to build their houses?", a: ["Baked Mud Bricks", "Stone", "Wood"], c: 0 },
+            { q: "What famous structure was found in Mohenjo-Daro?", a: ["The Great Bath", "The Great Pyramid", "The Colosseum"], c: 0 },
+            { q: "What writing system did they use?", a: ["Undeciphered Script", "Hieroglyphs", "Cuneiform"], c: 0 },
+            { q: "What material were their seals made of?", a: ["Steatite (Stone)", "Gold", "Plastic"], c: 0 },
+            { q: "Did they have a sewage system?", a: ["Yes, advanced drainage", "No", "Only for kings"], c: 0 },
             
-            try {
-                quizDb = firebase.firestore();
-                console.log("Firestore connected for quiz logging!");
-            } catch (e) {
-                console.warn("Firestore not available:", e);
-            }
-        } catch (error) {
-            console.warn("Firebase not configured. Running in single-player mode.");
-        }
-
-        // ===================================================================
-        // QUIZ QUESTIONS DATABASE - Ancient History
-        // ===================================================================
-        const QUIZ_QUESTIONS = [
-            // Mesopotamia Questions
-            { id: 1, text: "What two rivers surrounded Mesopotamia?", choices: { A: "Nile and Amazon", B: "Tigris and Euphrates", C: "Mississippi and Missouri", D: "Rhine and Danube" }, correct: "B" },
-            { id: 2, text: "What writing system did the Sumerians develop?", choices: { A: "Hieroglyphics", B: "Cuneiform", C: "Alphabet", D: "Pictographs" }, correct: "B" },
-            { id: 3, text: "What type of structure did Sumerians build as temples?", choices: { A: "Pyramids", B: "Ziggurats", C: "Colosseums", D: "Parthenons" }, correct: "B" },
-            { id: 4, text: "Who created the first known written law code?", choices: { A: "Sargon", B: "Nebuchadnezzar", C: "Hammurabi", D: "Cyrus" }, correct: "C" },
-            { id: 5, text: "What does 'Mesopotamia' mean?", choices: { A: "Land of Kings", B: "Land Between Rivers", C: "Fertile Valley", D: "Ancient Empire" }, correct: "B" },
-            { id: 6, text: "Which northern people later united Mesopotamia with iron weapons?", choices: { A: "Egyptians", B: "Assyrians", C: "Greeks", D: "Phoenicians" }, correct: "B" },
-            { id: 7, text: "What is cavalry?", choices: { A: "Soldiers on foot", B: "Soldiers on horses", C: "Temple guards", D: "Boat soldiers" }, correct: "B" },
-            { id: 8, text: "What city did Ashurbanipal make his capital?", choices: { A: "Babylon", B: "Persepolis", C: "Nineveh", D: "Jerusalem" }, correct: "C" },
-            { id: 9, text: "What was special about Ashurbanipal's library?", choices: { A: "Stored farming tools", B: "Held thousands of cuneiform tablets", C: "Built underwater", D: "Only for soldiers" }, correct: "B" },
-            { id: 10, text: "Nebuchadnezzar II was king of which empire?", choices: { A: "Old Babylonian", B: "Neo-Babylonian", C: "Egyptian", D: "Persian" }, correct: "B" },
-            
-            // Ancient Egypt Questions
-            { id: 11, text: "What river was central to ancient Egyptian civilization?", choices: { A: "Tigris River", B: "Nile River", C: "Euphrates River", D: "Jordan River" }, correct: "B" },
-            { id: 12, text: "What were the Egyptian kings called?", choices: { A: "Emperors", B: "Pharaohs", C: "Kings", D: "Sultans" }, correct: "B" },
-            { id: 13, text: "What writing system did ancient Egyptians use?", choices: { A: "Cuneiform", B: "Hieroglyphics", C: "Alphabet", D: "Runes" }, correct: "B" },
-            { id: 14, text: "What did Egyptians build as tombs for pharaohs?", choices: { A: "Temples", B: "Pyramids", C: "Ziggurats", D: "Castles" }, correct: "B" },
-            { id: 15, text: "What material did Egyptians use for writing?", choices: { A: "Papyrus", B: "Clay tablets", C: "Parchment", D: "Stone" }, correct: "A" },
-            { id: 16, text: "What process did Egyptians use to preserve bodies?", choices: { A: "Embalming", B: "Mummification", C: "Cremation", D: "Burial" }, correct: "B" },
-            { id: 17, text: "Which Egyptian structure is a Wonder of the Ancient World?", choices: { A: "Great Sphinx", B: "Great Pyramid of Giza", C: "Temple of Karnak", D: "Abu Simbel" }, correct: "B" },
-            { id: 18, text: "Who was a famous female pharaoh of Egypt?", choices: { A: "Nefertiti", B: "Hatshepsut", C: "Isis", D: "Bastet" }, correct: "B" },
-            { id: 19, text: "What did Egyptians believe happened after death?", choices: { A: "Nothing", B: "Afterlife with the gods", C: "Reincarnation", D: "Becoming stars" }, correct: "B" },
-            { id: 20, text: "Which god was king of the Egyptian gods?", choices: { A: "Osiris", B: "Ra", C: "Anubis", D: "Horus" }, correct: "B" },
-            
-            // Paleolithic/Neolithic Questions
-            { id: 21, text: "What does 'Paleolithic' mean?", choices: { A: "New Stone Age", B: "Old Stone Age", C: "Bronze Age", D: "Iron Age" }, correct: "B" },
-            { id: 22, text: "How did Paleolithic people get food?", choices: { A: "Farming", B: "Trading", C: "Hunting and gathering", D: "Fishing only" }, correct: "C" },
-            { id: 23, text: "What major change marked the Neolithic Revolution?", choices: { A: "Writing invented", B: "Agriculture began", C: "Iron tools made", D: "Cities built" }, correct: "B" },
-            { id: 24, text: "What does 'Neolithic' mean?", choices: { A: "Old Stone Age", B: "New Stone Age", C: "Middle Stone Age", D: "No Stone Age" }, correct: "B" },
-            { id: 25, text: "Which tools were first used in the Paleolithic period?", choices: { A: "Metal tools", B: "Stone tools", C: "Plastic tools", D: "Iron tools" }, correct: "B" },
-            { id: 26, text: "Cave paintings were created during which period?", choices: { A: "Neolithic", B: "Paleolithic", C: "Bronze Age", D: "Iron Age" }, correct: "B" },
-            { id: 27, text: "What did Neolithic people begin to do?", choices: { A: "Stop using tools", B: "Domesticate animals", C: "Live in caves only", D: "Hunt mammoths" }, correct: "B" },
-            { id: 28, text: "What type of homes did Paleolithic people use?", choices: { A: "Stone houses", B: "Caves and temporary shelters", C: "Wooden castles", D: "Underground tunnels" }, correct: "B" },
-            
-            // Persian Empire Questions  
-            { id: 29, text: "Cyrus the Great first defeated which people?", choices: { A: "The Medes", B: "The Egyptians", C: "The Greeks", D: "The Romans" }, correct: "A" },
-            { id: 30, text: "What is a standing army?", choices: { A: "Summer soldiers", B: "Permanent professional army", C: "Farmers who fight", D: "Noble army" }, correct: "B" },
-            
-            // Maurya Empire & Indian Geography Questions
-            { id: 31, text: "Why is India called a subcontinent?", choices: { A: "It's smaller than other continents", B: "It's a large landmass separated by mountains", C: "It has many religions", D: "It was discovered late" }, correct: "B" },
-            { id: 32, text: "Who founded the Maurya Empire?", choices: { A: "Chandragupta Maurya", B: "Ashoka", C: "Kautilya", D: "Alexander the Great" }, correct: "A" },
-            { id: 33, text: "What was Kautilya famous for writing?", choices: { A: "Arthashastra (book on government)", B: "The Vedas", C: "Poetry", D: "Religious texts" }, correct: "A" },
-            { id: 34, text: "How did Chandragupta defeat the Nanda Dynasty?", choices: { A: "With Kautilya's help and strategy", B: "With magic powers", C: "Through marriage", D: "He didn't defeat them" }, correct: "A" },
-            { id: 35, text: "What was the capital of the Maurya Empire?", choices: { A: "Pataliputra", B: "Delhi", C: "Mohenjo-Daro", D: "Babylon" }, correct: "A" },
-            { id: 36, text: "Which mountains separate India from the rest of Asia?", choices: { A: "Himalayas", B: "Rocky Mountains", C: "Alps", D: "Andes" }, correct: "A" },
-            { id: 37, text: "What did Kautilya advise rulers to have?", choices: { A: "Spies and a strong army", B: "Only priests", C: "No government", D: "Foreign allies only" }, correct: "A" }
+            // Maurya Empire & Indian Geography
+            { q: "Why is India called a subcontinent?", a: ["It's a large landmass separated by mountains", "It has many religions", "It's smaller than other continents"], c: 0 },
+            { q: "Who founded the Maurya Empire?", a: ["Chandragupta Maurya", "Ashoka", "Kautilya"], c: 0 },
+            { q: "What was Kautilya famous for writing?", a: ["Arthashastra (book on government)", "The Vedas", "Poetry"], c: 0 },
+            { q: "How did Chandragupta defeat the Nanda Dynasty?", a: ["With Kautilya's help and strategy", "With magic powers", "Through marriage"], c: 0 },
+            { q: "What was the capital of the Maurya Empire?", a: ["Pataliputra", "Delhi", "Mohenjo-Daro"], c: 0 },
+            { q: "Which mountains separate India from the rest of Asia?", a: ["Himalayas", "Rocky Mountains", "Alps"], c: 0 },
+            { q: "What did Kautilya advise rulers to have?", a: ["Spies and a strong army", "Only priests", "No government"], c: 0 }
         ];
 
-        // Military Ranks based on knockouts
+        // Military Ranks
         const MILITARY_RANKS = [
-            { min: 0, name: "Private", badge: "🔰", color: "#888" },
-            { min: 1, name: "Corporal", badge: "⚔️", color: "#8B4513" },
-            { min: 3, name: "Sergeant", badge: "🛡️", color: "#C0C0C0" },
-            { min: 5, name: "Lieutenant", badge: "⭐", color: "#FFD700" },
-            { min: 8, name: "Captain", badge: "🌟", color: "#FFA500" },
-            { min: 12, name: "Major", badge: "💫", color: "#FF6347" },
-            { min: 15, name: "Colonel", badge: "🎖️", color: "#DC143C" },
-            { min: 20, name: "General", badge: "👑", color: "#9400D3" },
-            { min: 30, name: "Supreme Commander", badge: "🏆", color: "#FFD700" }
+            { min: 0, name: "Private", badge: "🔰" },
+            { min: 1, name: "Corporal", badge: "⚔️" },
+            { min: 3, name: "Sergeant", badge: "🛡️" },
+            { min: 5, name: "Lieutenant", badge: "⭐" },
+            { min: 8, name: "Captain", badge: "🌟" },
+            { min: 12, name: "Major", badge: "💫" },
+            { min: 15, name: "Colonel", badge: "🎖️" },
+            { min: 20, name: "General", badge: "👑" },
+            { min: 30, name: "Supreme Commander", badge: "🏆" }
         ];
 
         function getRank(knockouts) {
             for (let i = MILITARY_RANKS.length - 1; i >= 0; i--) {
-                if (knockouts >= MILITARY_RANKS[i].min) {
-                    return MILITARY_RANKS[i];
-                }
+                if (knockouts >= MILITARY_RANKS[i].min) return MILITARY_RANKS[i];
             }
             return MILITARY_RANKS[0];
         }
 
         // ===================================================================
-        // ACCESSIBILITY SYSTEM
+        // 2. SOCKET.IO EVENTS (The "Phone Line" to Server)
         // ===================================================================
-        let ttsEnabled = true;
-        let speechRate = 1;
-
-        function speakText(text, force = false) {
-            if (!ttsEnabled && !force) return;
-            if ('speechSynthesis' in window) {
-                speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = speechRate;
-                speechSynthesis.speak(utterance);
-            }
-        }
-
-        document.getElementById('dyslexiaFont').addEventListener('change', (e) => {
-            document.body.classList.toggle('dyslexia-font', e.target.checked);
-            speakText('Easy-read font ' + (e.target.checked ? 'enabled' : 'disabled'));
+        
+        socket.on('connect', () => {
+            console.log("✅ Connected to Server! ID:", socket.id);
+            myId = socket.id;
+            document.getElementById('connection-status').innerText = "🟢 Server Online";
+            document.getElementById('connection-status').style.color = "green";
         });
 
-        document.getElementById('highContrast').addEventListener('change', (e) => {
-            document.body.classList.toggle('high-contrast', e.target.checked);
-            speakText('High contrast colors ' + (e.target.checked ? 'enabled' : 'disabled'));
+        socket.on('disconnect', () => {
+            console.log("❌ Disconnected");
+            document.getElementById('connection-status').innerText = "🔴 Disconnected - Reconnecting...";
+            document.getElementById('connection-status').style.color = "red";
         });
 
-        document.getElementById('textToSpeech').addEventListener('change', (e) => {
-            ttsEnabled = e.target.checked;
-            speakText('Read aloud ' + (e.target.checked ? 'enabled' : 'disabled'), true);
+        // Update Room Populations on Start Screen
+        socket.on('roomCounts', (counts) => {
+            const display = Object.keys(counts).map(k => `${k.replace('arena-', '').toUpperCase()}: ${counts[k]}`).join(' | ');
+            document.getElementById('room-counts').innerText = display;
         });
 
-        document.getElementById('largerText').addEventListener('change', (e) => {
-            document.body.style.fontSize = e.target.checked ? '1.4em' : '1em';
-            speakText('Bigger text ' + (e.target.checked ? 'enabled' : 'disabled'));
+        // Initial Room Load
+        socket.on('roomState', (data) => {
+            // Load everyone currently in the room
+            otherPlayers = data.players || {};
+            delete otherPlayers[myId]; // Remove myself from this list
+        });
+
+        // New Player Joined
+        socket.on('playerJoined', (data) => {
+            if (data.playerId !== myId) {
+                otherPlayers[data.playerId] = data.playerData;
+            }
+        });
+
+        // Player Moved
+        socket.on('playerUpdate', (data) => {
+            if (otherPlayers[data.playerId]) {
+                // Simple interpolation could go here, but direct update for now
+                otherPlayers[data.playerId].x = data.playerData.x;
+                otherPlayers[data.playerId].y = data.playerData.y;
+                otherPlayers[data.playerId].knockouts = data.playerData.knockouts;
+            }
+        });
+
+        // Player Left
+        socket.on('playerLeft', (data) => {
+            delete otherPlayers[data.playerId];
+        });
+
+        // Battle Request Received
+        socket.on('battleInvite', (data) => {
+            // You are being attacked!
+            showQuiz(data);
+        });
+
+        // Battle Result
+        socket.on('battleResult', (data) => {
+            closeQuiz();
+            if (data.winner === myId) {
+                myPlayer.knockouts++;
+                alert("🎉 VICTORY! You won the battle!");
+            } else if (data.loser === myId) {
+                respawn();
+                alert("💀 DEFEATED! You have been respawned.");
+            }
         });
 
         // ===================================================================
-        // EMOJI PICKER
+        // 3. GAME ENGINE
         // ===================================================================
-        let selectedEmoji = '⭐';
 
-        document.querySelectorAll('.emoji-option').forEach(option => {
-            option.addEventListener('click', () => {
-                document.querySelectorAll('.emoji-option').forEach(o => o.classList.remove('selected'));
-                option.classList.add('selected');
-                selectedEmoji = option.dataset.emoji;
-                speakText(`Selected ${selectedEmoji}`);
-            });
-        });
+        function startGame() {
+            const nameInput = document.getElementById('playerName').value.trim();
+            const roomSelect = document.getElementById('roomSelect').value;
 
-        // ===================================================================
-        // GAME CONFIGURATION
-        // ===================================================================
-        const CONFIG = {
-            WORLD_WIDTH: 4000,
-            WORLD_HEIGHT: 4000,
-            PLAYER_SIZE: 50,
-            SPEED: 2.5,  // Slower movement
-            COLLISION_DISTANCE: 60,
-            RESPAWN_TIME: 15000,
-            QUIZ_TIME: 10000,
-            BATTLE_COOLDOWN: 3000
-        };
-
-        // Graveyard Safe Zone - center of the map
-        const GRAVEYARD = {
-            x: CONFIG.WORLD_WIDTH / 2,
-            y: CONFIG.WORLD_HEIGHT / 2,
-            width: 600,
-            height: 500
-        };
-
-        // Gravestone positions within the graveyard
-        const GRAVESTONES = [];
-        function generateGravestones() {
-            const styles = ['🪦', '⚰️', '💀', '☠️', '🦴'];
-            const tombstoneTexts = ['RIP', 'REST', '💀', 'HERE LIES', 'KNOCKED'];
-            
-            // Generate scattered gravestones
-            for (let i = 0; i < 25; i++) {
-                const gx = GRAVEYARD.x - GRAVEYARD.width/2 + 50 + Math.random() * (GRAVEYARD.width - 100);
-                const gy = GRAVEYARD.y - GRAVEYARD.height/2 + 80 + Math.random() * (GRAVEYARD.height - 160);
-                GRAVESTONES.push({
-                    x: gx,
-                    y: gy,
-                    style: styles[Math.floor(Math.random() * styles.length)],
-                    text: tombstoneTexts[Math.floor(Math.random() * tombstoneTexts.length)],
-                    size: 30 + Math.random() * 20,
-                    rotation: (Math.random() - 0.5) * 0.3
-                });
-            }
-        }
-        generateGravestones();
-
-        // ===================================================================
-        // GAME STATE
-        // ===================================================================
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const minimapCanvas = document.getElementById('minimap');
-        const minimapCtx = minimapCanvas.getContext('2d');
-
-        let gameStarted = false;
-        let playerId = null;
-        let playerName = '';
-        let currentRoom = 'arena-a';
-        let player = null;
-        let otherPlayers = {};
-        let camera = { x: 0, y: 0 };
-        let lastUpdate = Date.now();
-        let inBattle = false;
-        let battleCooldown = 0;
-        let isRespawning = false;
-
-        const keys = {
-            ArrowUp: false,
-            ArrowDown: false,
-            ArrowLeft: false,
-            ArrowRight: false,
-            KeyW: false,
-            KeyA: false,
-            KeyS: false,
-            KeyD: false
-        };
-        const MOVE_KEYS = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD'];
-
-        // ===================================================================
-        // PLAYER CLASS
-        // ===================================================================
-        class Player {
-            constructor(x, y, emoji, name) {
-                this.x = x;
-                this.y = y;
-                this.emoji = emoji;
-                this.name = name;
-                this.knockouts = 0;
-                this.lastUpdate = Date.now();
-                this.inBattle = false;
-                this.battleWith = null;
-            }
-
-            get rank() {
-                return getRank(this.knockouts);
-            }
-
-            move(dx, dy) {
-                if (inBattle) return;
-
-                const speed = CONFIG.SPEED;
-                let newX = this.x + dx * speed;
-                let newY = this.y + dy * speed;
-
-                // If respawning, keep player in graveyard
-                if (isRespawning) {
-                    newX = Math.max(GRAVEYARD.x - GRAVEYARD.width/2 + 30, 
-                           Math.min(GRAVEYARD.x + GRAVEYARD.width/2 - 30, newX));
-                    newY = Math.max(GRAVEYARD.y - GRAVEYARD.height/2 + 30, 
-                           Math.min(GRAVEYARD.y + GRAVEYARD.height/2 - 30, newY));
-                } else {
-                    // Normal bounds
-                    newX = Math.max(CONFIG.PLAYER_SIZE, Math.min(CONFIG.WORLD_WIDTH - CONFIG.PLAYER_SIZE, newX));
-                    newY = Math.max(CONFIG.PLAYER_SIZE, Math.min(CONFIG.WORLD_HEIGHT - CONFIG.PLAYER_SIZE, newY));
-                }
-
-                this.x = newX;
-                this.y = newY;
-            }
-
-            draw(ctx, camX, camY) {
-                const screenX = this.x - camX;
-                const screenY = this.y - camY;
-
-                // Ghostly effect if in graveyard
-                const inGrave = isInGraveyard(this.x, this.y);
-                if (inGrave) {
-                    ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 300) * 0.2;
-                }
-
-                // Draw rank badge above player
-                const rank = this.rank;
-                ctx.font = '24px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(rank.badge, screenX, screenY - 45);
-
-                // Draw glow effect
-                ctx.shadowColor = inGrave ? '#888' : rank.color;
-                ctx.shadowBlur = 20;
-
-                // Draw emoji
-                ctx.font = `${CONFIG.PLAYER_SIZE}px Arial`;
-                ctx.fillText(this.emoji, screenX, screenY + 15);
-
-                ctx.shadowBlur = 0;
-
-                // Draw name
-                ctx.font = 'bold 14px Arial';
-                ctx.fillStyle = inGrave ? '#aaa' : '#fff';
-                ctx.fillText(this.name, screenX, screenY + 45);
-
-                // Draw knockout count (or ghost status)
-                ctx.font = '12px Arial';
-                ctx.fillStyle = inGrave ? '#888' : '#e94560';
-                ctx.fillText(inGrave ? '👻 Ghost' : `KOs: ${this.knockouts}`, screenX, screenY + 60);
-
-                ctx.globalAlpha = 1;
-            }
-        }
-
-        // ===================================================================
-        // UTILITY FUNCTIONS
-        // ===================================================================
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-
-        function generateId() {
-            return 'player_' + Math.random().toString(36).substr(2, 9);
-        }
-
-        function getRandomPosition() {
-            let pos;
-            do {
-                pos = {
-                    x: 100 + Math.random() * (CONFIG.WORLD_WIDTH - 200),
-                    y: 100 + Math.random() * (CONFIG.WORLD_HEIGHT - 200)
-                };
-            } while (isInGraveyard(pos.x, pos.y));
-            return pos;
-        }
-
-        function isInGraveyard(x, y) {
-            return x > GRAVEYARD.x - GRAVEYARD.width/2 - 50 &&
-                   x < GRAVEYARD.x + GRAVEYARD.width/2 + 50 &&
-                   y > GRAVEYARD.y - GRAVEYARD.height/2 - 50 &&
-                   y < GRAVEYARD.y + GRAVEYARD.height/2 + 50;
-        }
-
-        function distance(p1, p2) {
-            const dx = p1.x - p2.x;
-            const dy = p1.y - p2.y;
-            return Math.sqrt(dx * dx + dy * dy);
-        }
-
-        // ===================================================================
-        // QUIZ BATTLE SYSTEM - Multiplayer Synced
-        // ===================================================================
-        let quizUsedIds = [];
-        let currentQuizQuestion = null;
-        let quizTimerId = null;
-        let quizOpponent = null;
-        let quizBattleId = null;
-        let hasAnswered = false;
-        let quizStartTime = 0;
-        let battleListener = null;
-
-        function pickQuestion() {
-            if (quizUsedIds.length >= QUIZ_QUESTIONS.length - 5) {
-                quizUsedIds = [];
-            }
-            const remaining = QUIZ_QUESTIONS.filter(q => !quizUsedIds.includes(q.id));
-            const q = remaining[Math.floor(Math.random() * remaining.length)];
-            quizUsedIds.push(q.id);
-            return q;
-        }
-
-        function getQuestionById(id) {
-            return QUIZ_QUESTIONS.find(q => q.id === id);
-        }
-
-        // Listen for incoming battle requests
-        function listenForBattles() {
-            if (!firebaseEnabled || !playerId) return;
-            
-            console.log('🎮 Listening for battles in room:', currentRoom);
-            
-            database.ref('rooms/' + currentRoom + '/battles').on('child_added', (snapshot) => {
-                const battle = snapshot.val();
-                const battleKey = snapshot.key;
-                
-                if (!battle) return;
-                
-                // Skip if already in a battle or respawning
-                if (inBattle || isRespawning) {
-                    console.log('⏭️ Skipping battle - already busy');
-                    return;
-                }
-                
-                // Check if this battle involves us
-                if (battle.player1 === playerId || battle.player2 === playerId) {
-                    console.log('⚔️ Battle detected involving us:', battleKey);
-                    
-                    // Check if battle is stale (more than 15 seconds old)
-                    if (battle.startTime && Date.now() - battle.startTime > 15000) {
-                        console.log('🗑️ Cleaning stale battle:', battleKey);
-                        database.ref('rooms/' + currentRoom + '/battles/' + battleKey).remove();
-                        return;
-                    }
-                    
-                    const opponentId = battle.player1 === playerId ? battle.player2 : battle.player1;
-                    const opponent = otherPlayers[opponentId];
-                    
-                    if (opponent && !inBattle) {
-                        console.log('🎯 Joining battle against:', opponent.name);
-                        joinBattle(battleKey, battle, opponent);
-                    }
-                }
-            });
-            
-            // Also clean up old battles periodically
-            setInterval(() => {
-                if (!gameStarted) return;
-                database.ref('rooms/' + currentRoom + '/battles').once('value', (snapshot) => {
-                    const battles = snapshot.val();
-                    if (!battles) return;
-                    
-                    Object.keys(battles).forEach(key => {
-                        const battle = battles[key];
-                        if (battle.startTime && Date.now() - battle.startTime > 20000) {
-                            console.log('🗑️ Cleaning old battle:', key);
-                            database.ref('rooms/' + currentRoom + '/battles/' + key).remove();
-                        }
-                    });
-                });
-            }, 10000);
-        }
-
-        function startQuizBattle(opponentId, opponent) {
-            if (inBattle || isRespawning) return;
-            if (Date.now() < battleCooldown) return;
-
-            console.log('💥 Collision detected with:', opponent.name);
-
-            // Create a consistent battle ID (sorted so both players get same ID)
-            const newBattleId = [playerId, opponentId].sort().join('_');
-            
-            // Check if battle already exists
-            if (firebaseEnabled) {
-                database.ref('rooms/' + currentRoom + '/battles/' + newBattleId).once('value', (snapshot) => {
-                    if (snapshot.exists()) {
-                        console.log('⏭️ Battle already exists, waiting for listener');
-                        // Battle already created by opponent, we'll join via listener
-                        return;
-                    }
-                    
-                    console.log('🆕 Creating new battle:', newBattleId);
-                    
-                    // We create the battle
-                    const question = pickQuestion();
-                    
-                    database.ref('rooms/' + currentRoom + '/battles/' + newBattleId).set({
-                        player1: playerId,
-                        player2: opponentId,
-                        questionId: question.id,
-                        startTime: Date.now(),
-                        answers: {},
-                        resolved: false
-                    });
-                });
-            }
-        }
-
-        function joinBattle(battleId, battleData, opponent) {
-            if (inBattle) return;
-            
-            inBattle = true;
-            hasAnswered = false;
-            quizOpponent = opponent;
-            quizOpponent.id = battleData.player1 === playerId ? battleData.player2 : battleData.player1;
-            quizBattleId = battleId;
-            
-            // Get the question from the battle data (same for both players!)
-            const question = getQuestionById(battleData.questionId);
-            if (!question) {
-                console.error('Question not found:', battleData.questionId);
-                inBattle = false;
+            if (!nameInput) {
+                alert("Please enter a name!");
                 return;
             }
+
+            // Setup My Player
+            myPlayer.name = nameInput;
+            myPlayer.room = roomSelect;
             
-            currentQuizQuestion = question;
-            quizStartTime = Date.now();
-
-            // Show quiz overlay
-            const overlay = document.getElementById('quizBattleOverlay');
-            overlay.classList.remove('hidden');
-
-            // Set up players
-            document.getElementById('quizPlayer1').innerHTML = `
-                <div class="emoji">${player.emoji}</div>
-                <div class="name">${player.name}</div>
-            `;
-            document.getElementById('quizPlayer2').innerHTML = `
-                <div class="emoji">${opponent.emoji}</div>
-                <div class="name">${opponent.name}</div>
-            `;
-
-            // Set question
-            document.getElementById('quizQuestion').textContent = question.text;
-            speakText(question.text);
-
-            // Set answers (use battle ID as seed for consistent shuffle)
-            const answersDiv = document.getElementById('quizAnswers');
-            const choiceKeys = Object.keys(question.choices);
-            // Use deterministic shuffle based on battleId so both players see same order
-            const seed = battleId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-            const shuffled = choiceKeys.sort((a, b) => {
-                const hashA = (a.charCodeAt(0) * seed) % 100;
-                const hashB = (b.charCodeAt(0) * seed) % 100;
-                return hashA - hashB;
-            });
-            
-            answersDiv.innerHTML = shuffled.map(key => `
-                <div class="quiz-answer" data-choice="${key}">
-                    ${key}: ${question.choices[key]}
-                </div>
-            `).join('');
-
-            // Add click handlers
-            answersDiv.querySelectorAll('.quiz-answer').forEach(btn => {
-                btn.addEventListener('click', () => handleQuizAnswer(btn.dataset.choice));
-            });
-
-            // Hide result
-            document.getElementById('quizResult').classList.add('hidden');
-
-            // Start timer
-            let timeLeft = 10;
-            document.getElementById('quizTimer').textContent = timeLeft;
-            document.getElementById('quizTimer').classList.remove('urgent');
-
-            if (quizTimerId) clearInterval(quizTimerId);
-            quizTimerId = setInterval(() => {
-                timeLeft--;
-                document.getElementById('quizTimer').textContent = timeLeft;
-                
-                if (timeLeft <= 3) {
-                    document.getElementById('quizTimer').classList.add('urgent');
-                }
-                
-                if (timeLeft <= 0) {
-                    clearInterval(quizTimerId);
-                    if (!hasAnswered) {
-                        handleQuizTimeout();
-                    }
-                }
-            }, 1000);
-
-            // Listen for battle resolution
-            if (battleListener) {
-                database.ref('rooms/' + currentRoom + '/battles/' + quizBattleId).off('value', battleListener);
-            }
-            battleListener = database.ref('rooms/' + currentRoom + '/battles/' + quizBattleId).on('value', checkBattleResult);
-        }
-
-        function handleQuizAnswer(choice) {
-            if (hasAnswered) return;
-            hasAnswered = true;
-
-            const answerTime = Date.now() - quizStartTime;
-            const isCorrect = choice === currentQuizQuestion.correct;
-
-            // Highlight answer
-            document.querySelectorAll('.quiz-answer').forEach(btn => {
-                btn.classList.add('disabled');
-                if (btn.dataset.choice === currentQuizQuestion.correct) {
-                    btn.classList.add('correct');
-                } else if (btn.dataset.choice === choice && !isCorrect) {
-                    btn.classList.add('incorrect');
-                }
-            });
-
-            // Send answer to Firebase
-            if (firebaseEnabled) {
-                database.ref('rooms/' + currentRoom + '/battles/' + quizBattleId + '/answers/' + playerId).set({
-                    choice: choice,
-                    correct: isCorrect,
-                    time: answerTime
-                });
-            }
-
-            // Log to Firestore
-            logQuizAnswer(currentQuizQuestion, choice, isCorrect);
-        }
-
-        function handleQuizTimeout() {
-            hasAnswered = true;
-            
-            // Highlight correct answer
-            document.querySelectorAll('.quiz-answer').forEach(btn => {
-                btn.classList.add('disabled');
-                if (btn.dataset.choice === currentQuizQuestion.correct) {
-                    btn.classList.add('correct');
-                }
-            });
-            
-            // Send timeout to Firebase
-            if (firebaseEnabled) {
-                database.ref('rooms/' + currentRoom + '/battles/' + quizBattleId + '/answers/' + playerId).set({
-                    choice: null,
-                    correct: false,
-                    time: CONFIG.QUIZ_TIME,
-                    timeout: true
-                });
-            }
-
-            // Wait a moment for opponent's answer, then resolve
-            setTimeout(() => {
-                if (inBattle) {
-                    // Check if opponent answered
-                    database.ref('rooms/' + currentRoom + '/battles/' + quizBattleId + '/answers').once('value', (snapshot) => {
-                        const answers = snapshot.val();
-                        if (!answers) {
-                            showQuizResult(false, "Time's up!");
-                            return;
-                        }
-                        const opponentId = Object.keys(answers).find(id => id !== playerId);
-                        if (opponentId && answers[opponentId]) {
-                            // Opponent answered, result will be handled by listener
-                        } else {
-                            // Opponent also timed out or disconnected - draw (both lose)
-                            showQuizResult(false, "Time's up! No winner.");
-                        }
-                    });
-                }
-            }, 1500);
-        }
-
-        function checkBattleResult(snapshot) {
-            const battle = snapshot.val();
-            if (!battle || !battle.answers) return;
-
-            const answers = battle.answers;
-            const myAnswer = answers[playerId];
-            const opponentId = Object.keys(answers).find(id => id !== playerId);
-            
-            if (!myAnswer || !opponentId || !answers[opponentId]) return;
-            
-            const opponentAnswer = answers[opponentId];
-
-            // Both have answered - determine winner
-            clearInterval(quizTimerId);
-
-            let iWin = false;
-            let resultText = '';
-
-            if (myAnswer.correct && !opponentAnswer.correct) {
-                iWin = true;
-                resultText = "You got it right!";
-            } else if (!myAnswer.correct && opponentAnswer.correct) {
-                iWin = false;
-                resultText = "They got it right!";
-            } else if (myAnswer.correct && opponentAnswer.correct) {
-                // Both correct - fastest wins
-                if (myAnswer.time < opponentAnswer.time) {
-                    iWin = true;
-                    resultText = "You were faster!";
-                } else {
-                    iWin = false;
-                    resultText = "They were faster!";
-                }
-            } else {
-                // Both wrong - fastest to answer loses (punishment for rushing)
-                iWin = myAnswer.time > opponentAnswer.time;
-                resultText = "Both wrong - " + (iWin ? "but you answered slower (safer)!" : "they answered slower!");
-            }
-
-            showQuizResult(iWin, resultText);
-
-            // Clean up listener
-            if (battleListener) {
-                database.ref('rooms/' + currentRoom + '/battles/' + quizBattleId).off('value', battleListener);
-                battleListener = null;
-            }
-        }
-
-        function showQuizResult(won, message) {
-            const resultDiv = document.getElementById('quizResult');
-            resultDiv.classList.remove('hidden', 'winner', 'loser');
-            
-            if (won) {
-                resultDiv.classList.add('winner');
-                resultDiv.innerHTML = `🏆 KNOCKOUT! ${message}`;
-                player.knockouts++;
-                speakText("Knockout! " + message);
-                
-                // Send knockout notification
-                if (firebaseEnabled && quizOpponent) {
-                    sendKnockout(quizOpponent.id);
-                }
-            } else {
-                resultDiv.classList.add('loser');
-                resultDiv.innerHTML = `💥 KNOCKED OUT! ${message}`;
-                speakText("Knocked out! " + message);
-            }
-
-            // Update stats
-            updateStats();
-
-            // Close battle after delay
-            setTimeout(() => {
-                document.getElementById('quizBattleOverlay').classList.add('hidden');
-                inBattle = false;
-                battleCooldown = Date.now() + CONFIG.BATTLE_COOLDOWN;
-                
-                // Clean up battle from Firebase
-                if (firebaseEnabled) {
-                    database.ref('rooms/' + currentRoom + '/battles/' + quizBattleId).remove();
-                }
-
-                if (!won) {
-                    startRespawn();
-                }
-            }, 2500);
-        }
-
-        function sendKnockout(victimId) {
-            if (!firebaseEnabled) return;
-            database.ref('rooms/' + currentRoom + '/knockouts/' + victimId).set({
-                knockedBy: playerId,
-                knockerName: player.name,
-                timestamp: Date.now()
-            });
-            setTimeout(() => {
-                database.ref('rooms/' + currentRoom + '/knockouts/' + victimId).remove();
-            }, 1000);
-        }
-
-        function listenForKnockouts() {
-            if (!firebaseEnabled || !playerId) return;
-            database.ref('rooms/' + currentRoom + '/knockouts/' + playerId).on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data && gameStarted && !inBattle) {
-                    // We got knocked out outside of a battle we're aware of
-                    speakText(`${data.knockerName} knocked you out!`);
-                    startRespawn();
-                }
-            });
-        }
-
-        function startRespawn() {
-            isRespawning = true;
-            // Player KEEPS their knockouts and rank - death delay is punishment enough!
-            
-            // Teleport to graveyard
-            player.x = GRAVEYARD.x + (Math.random() - 0.5) * (GRAVEYARD.width - 100);
-            player.y = GRAVEYARD.y + (Math.random() - 0.5) * (GRAVEYARD.height - 100);
-            syncPlayerToFirebase();
-            
-            const overlay = document.getElementById('respawnOverlay');
-            overlay.classList.remove('hidden');
-            
-            let countdown = 15;
-            document.getElementById('respawnCountdown').textContent = countdown;
-            
-            speakText("You've been sent to the graveyard! Wait 15 seconds to respawn.");
-            
-            const countdownInterval = setInterval(() => {
-                countdown--;
-                document.getElementById('respawnCountdown').textContent = countdown;
-                
-                if (countdown <= 0) {
-                    clearInterval(countdownInterval);
-                    overlay.classList.add('hidden');
-                    respawnPlayer();
-                }
-            }, 1000);
-        }
-
-        function respawnPlayer() {
-            // Spawn outside the graveyard
-            let pos;
+            // Random Start Position (not in graveyard)
             do {
-                pos = getRandomPosition();
-            } while (isInGraveyard(pos.x, pos.y));
+                myPlayer.x = 200 + Math.random() * (WORLD_WIDTH - 400);
+                myPlayer.y = 200 + Math.random() * (WORLD_HEIGHT - 400);
+            } while (isInGraveyard(myPlayer.x, myPlayer.y));
+
+            // Join the Server Room
+            socket.emit('joinRoom', {
+                room: roomSelect,
+                playerData: myPlayer
+            });
+
+            // Update UI
+            document.getElementById('startMenu').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            document.getElementById('room-display').innerText = "📍 " + roomSelect.toUpperCase();
             
-            player.x = pos.x;
-            player.y = pos.y;
-            isRespawning = false;
-            battleCooldown = Date.now() + CONFIG.BATTLE_COOLDOWN;
-            syncPlayerToFirebase();
-            speakText("You're back in the fight!");
-        }
-
-        function logQuizAnswer(question, choice, isCorrect) {
-            if (!quizDb) return;
-
-            const record = {
-                name: playerName || "Anonymous",
-                game: "Emoji Battle",
-                topic: "Ancient History Review",
-                room: currentRoom || "unknown",
-                questionId: question.id,
-                questionText: question.text,
-                correctChoice: question.correct,
-                chosenChoice: choice,
-                correct: !!isCorrect,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            quizDb.collection("emoji_battle_scores").add(record).catch(err => {
-                console.error("Error logging quiz answer:", err);
-            });
+            gameStarted = true;
+            resizeCanvas();
+            requestAnimationFrame(gameLoop);
         }
 
         // ===================================================================
-        // FIREBASE SYNC (Same protocol as Cell Game)
+        // GRAVEYARD & MINIMAP FUNCTIONS
         // ===================================================================
-        function syncPlayerToFirebase() {
-            if (!firebaseEnabled || !player) return;
-
-            database.ref('rooms/' + currentRoom + '/players/' + playerId).set({
-                id: playerId,
-                name: player.name,
-                x: player.x,
-                y: player.y,
-                emoji: player.emoji,
-                knockouts: player.knockouts,
-                inBattle: inBattle,
-                lastUpdate: Date.now()
-            });
+        
+        function isInGraveyard(x, y) {
+            return x > GRAVEYARD.x - GRAVEYARD.width/2 &&
+                   x < GRAVEYARD.x + GRAVEYARD.width/2 &&
+                   y > GRAVEYARD.y - GRAVEYARD.height/2 &&
+                   y < GRAVEYARD.y + GRAVEYARD.height/2;
         }
 
-        function listenToOtherPlayers() {
-            if (!firebaseEnabled) return;
-            database.ref('rooms/' + currentRoom + '/players').on('value', (snapshot) => {
-                const players = snapshot.val();
-                otherPlayers = {};
-                if (players) {
-                    Object.keys(players).forEach(id => {
-                        if (id !== playerId) {
-                            const p = players[id];
-                            if (Date.now() - p.lastUpdate < 10000) {
-                                const other = new Player(p.x, p.y, p.emoji, p.name);
-                                other.knockouts = p.knockouts || 0;
-                                other.inBattle = p.inBattle || false;
-                                other.id = id;
-                                otherPlayers[id] = other;
-                            }
-                        }
-                    });
+        function drawGraveyard() {
+            const gx = GRAVEYARD.x - camera.x;
+            const gy = GRAVEYARD.y - camera.y;
+            
+            // Dark ground
+            ctx.fillStyle = 'rgba(40, 40, 50, 0.8)';
+            ctx.fillRect(gx - GRAVEYARD.width/2, gy - GRAVEYARD.height/2, GRAVEYARD.width, GRAVEYARD.height);
+            
+            // Border
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(gx - GRAVEYARD.width/2, gy - GRAVEYARD.height/2, GRAVEYARD.width, GRAVEYARD.height);
+            
+            // Sign
+            ctx.font = 'bold 24px Arial';
+            ctx.fillStyle = '#888';
+            ctx.textAlign = 'center';
+            ctx.fillText('☠️ GRAVEYARD ☠️', gx, gy - GRAVEYARD.height/2 + 30);
+            ctx.fillText('🛡️ SAFE ZONE 🛡️', gx, gy - GRAVEYARD.height/2 + 60);
+            
+            // Gravestones
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8;
+                const radius = GRAVEYARD.width / 3;
+                const sx = gx + Math.cos(angle) * radius;
+                const sy = gy + Math.sin(angle) * radius;
+                ctx.font = '30px Arial';
+                ctx.fillText('🪦', sx, sy);
+            }
+        }
+
+        function updateMinimap() {
+            const minimapCanvas = document.getElementById('minimap');
+            const minimapCtx = minimapCanvas.getContext('2d');
+            const scale = 150 / WORLD_WIDTH;
+            
+            minimapCtx.clearRect(0, 0, 150, 150);
+            minimapCtx.fillStyle = 'rgba(26, 26, 46, 0.8)';
+            minimapCtx.fillRect(0, 0, 150, 150);
+            
+            // Draw graveyard
+            minimapCtx.fillStyle = 'rgba(80, 80, 100, 0.8)';
+            minimapCtx.fillRect(
+                (GRAVEYARD.x - GRAVEYARD.width/2) * scale,
+                (GRAVEYARD.y - GRAVEYARD.height/2) * scale,
+                GRAVEYARD.width * scale,
+                GRAVEYARD.height * scale
+            );
+            
+            // Draw my player
+            minimapCtx.fillStyle = '#e94560';
+            minimapCtx.beginPath();
+            minimapCtx.arc(myPlayer.x * scale, myPlayer.y * scale, 4, 0, Math.PI * 2);
+            minimapCtx.fill();
+            
+            // Draw others
+            Object.values(otherPlayers).forEach(p => {
+                minimapCtx.fillStyle = isInGraveyard(p.x, p.y) ? '#888' : '#4ECDC4';
+                minimapCtx.beginPath();
+                minimapCtx.arc(p.x * scale, p.y * scale, 3, 0, Math.PI * 2);
+                minimapCtx.fill();
+            });
+            
+            // Border
+            minimapCtx.strokeStyle = '#e94560';
+            minimapCtx.lineWidth = 2;
+            minimapCtx.strokeRect(0, 0, 150, 150);
+        }
+
+        function updateLeaderboard() {
+            const allPlayers = [myPlayer, ...Object.values(otherPlayers)];
+            const sorted = allPlayers.sort((a, b) => b.knockouts - a.knockouts).slice(0, 10);
+            
+            const html = sorted.map((p, i) => {
+                const rank = getRank(p.knockouts);
+                const isMe = p.id === myId || p === myPlayer;
+                const className = isMe ? 'leaderboard-entry current-player' : 'leaderboard-entry';
+                return `<div class="${className}">
+                    <span>${rank.badge} ${p.name}</span>
+                    <span>${p.knockouts} KO</span>
+                </div>`;
+            }).join('');
+            
+            document.getElementById('leaderboardList').innerHTML = html;
+        }
+
+        function updateCamera() {
+            camera.x = myPlayer.x - canvas.width / 2;
+            camera.y = myPlayer.y - canvas.height / 2;
+        }
+
+        function gameLoop() {
+            if (!gameStarted) return;
+
+            // 1. Handle respawn
+            if (isRespawning) {
+                const timeLeft = Math.ceil((RESPAWN_TIME - (Date.now() - respawnTimer)) / 1000);
+                document.getElementById('respawnCountdown').textContent = Math.max(0, timeLeft);
+                
+                if (Date.now() - respawnTimer >= RESPAWN_TIME) {
+                    isRespawning = false;
+                    document.getElementById('respawnOverlay').style.display = 'none';
+                    // Respawn outside graveyard
+                    do {
+                        myPlayer.x = 200 + Math.random() * (WORLD_WIDTH - 400);
+                        myPlayer.y = 200 + Math.random() * (WORLD_HEIGHT - 400);
+                    } while (isInGraveyard(myPlayer.x, myPlayer.y));
                 }
-                updatePlayerCount();
+            }
+
+            // 2. Move
+            if (!isRespawning) {
+                handleMovement();
+            } else {
+                // Can move in graveyard while waiting
+                let dx = 0, dy = 0;
+                if (keys['ArrowUp'] || keys['KeyW']) dy = -SPEED;
+                if (keys['ArrowDown'] || keys['KeyS']) dy = SPEED;
+                if (keys['ArrowLeft'] || keys['KeyA']) dx = -SPEED;
+                if (keys['ArrowRight'] || keys['KeyD']) dx = SPEED;
+                
+                myPlayer.x += dx;
+                myPlayer.y += dy;
+                
+                // Keep in graveyard
+                myPlayer.x = Math.max(GRAVEYARD.x - GRAVEYARD.width/2 + 30, 
+                                     Math.min(GRAVEYARD.x + GRAVEYARD.width/2 - 30, myPlayer.x));
+                myPlayer.y = Math.max(GRAVEYARD.y - GRAVEYARD.height/2 + 30,
+                                     Math.min(GRAVEYARD.y + GRAVEYARD.height/2 - 30, myPlayer.y));
+            }
+
+            // 3. Update camera
+            updateCamera();
+
+            // 4. Draw Background
+            ctx.fillStyle = settings.contrast ? '#000' : '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+            drawGraveyard();
+
+            // 5. Draw Others
+            Object.keys(otherPlayers).forEach(id => {
+                const p = otherPlayers[id];
+                const screenX = p.x - camera.x;
+                const screenY = p.y - camera.y;
+                const rank = getRank(p.knockouts);
+                drawEmojiPlayer(screenX, screenY, p.emoji, `${rank.badge} ${p.name}`, false);
             });
-        }
 
-        function removePlayerFromFirebase() {
-            if (!firebaseEnabled || !playerId) return;
-            database.ref('rooms/' + currentRoom + '/players/' + playerId).remove();
-        }
+            // 6. Draw Me
+            const screenX = myPlayer.x - camera.x;
+            const screenY = myPlayer.y - camera.y;
+            const myRank = getRank(myPlayer.knockouts);
+            const displayName = isRespawning ? '👻 Ghost' : `${myRank.badge} ${myPlayer.name}`;
+            drawEmojiPlayer(screenX, screenY, myPlayer.emoji, displayName, true);
 
-        function updateRoomCounts() {
-            if (!firebaseEnabled) return;
-            const rooms = ['arena-a', 'arena-b', 'arena-c', 'arena-d'];
-            rooms.forEach(room => {
-                database.ref('rooms/' + room + '/players').once('value', (snapshot) => {
-                    const players = snapshot.val();
-                    let count = 0;
-                    if (players) {
-                        Object.keys(players).forEach(id => {
-                            const p = players[id];
-                            if (Date.now() - p.lastUpdate < 10000) {
-                                count++;
-                            }
-                        });
-                    }
-                    const roomLetter = room.split('-')[1].toUpperCase();
-                    const option = document.querySelector(`#roomSelect option[value="${room}"]`);
-                    if (option) {
-                        const emoji = option.textContent.split(' ')[0];
-                        option.textContent = `${emoji} Arena ${roomLetter} (Players: ${count})`;
-                    }
-                });
+            // 7. Update UI
+            document.getElementById('score-display').innerText = `🏆 Knockouts: ${myPlayer.knockouts} | ${myRank.name}`;
+            updateMinimap();
+            updateLeaderboard();
+
+            // 8. Send Update to Server
+            socket.emit('updatePlayer', {
+                x: myPlayer.x,
+                y: myPlayer.y,
+                knockouts: myPlayer.knockouts,
+                inGraveyard: isRespawning
             });
+
+            requestAnimationFrame(gameLoop);
         }
 
-        // ===================================================================
-        // COLLISION DETECTION
-        // ===================================================================
-        function checkCollisions() {
-            if (inBattle || isRespawning || Date.now() < battleCooldown) return;
+        function handleMovement() {
+            let dx = 0; 
+            let dy = 0;
+
+            if (keys['ArrowUp'] || keys['KeyW']) dy = -SPEED;
+            if (keys['ArrowDown'] || keys['KeyS']) dy = SPEED;
+            if (keys['ArrowLeft'] || keys['KeyA']) dx = -SPEED;
+            if (keys['ArrowRight'] || keys['KeyD']) dx = SPEED;
+
+            // Move and keep in world bounds
+            myPlayer.x += dx;
+            myPlayer.y += dy;
             
-            // No battles in the graveyard!
-            if (isInGraveyard(player.x, player.y)) return;
+            myPlayer.x = Math.max(50, Math.min(WORLD_WIDTH - 50, myPlayer.x));
+            myPlayer.y = Math.max(50, Math.min(WORLD_HEIGHT - 50, myPlayer.y));
+
+            // Collision Check (Trigger Battle)
+            if (dx !== 0 || dy !== 0) {
+                checkCollisions();
+            }
+        }
+
+        // Throttle battles so they don't spam
+        let lastBattleTime = 0;
+        function checkCollisions() {
+            if (isRespawning) return; // Can't battle while respawning
+            
+            const now = Date.now();
+            if (now - lastBattleTime < 3000) return; // 3 second cooldown
+            
+            // No battles in graveyard!
+            if (isInGraveyard(myPlayer.x, myPlayer.y)) return;
 
             Object.keys(otherPlayers).forEach(id => {
-                const other = otherPlayers[id];
-                
-                if (other.inBattle) return;
+                const p = otherPlayers[id];
                 
                 // Don't attack players in graveyard
-                if (isInGraveyard(other.x, other.y)) return;
+                if (p.inGraveyard || isInGraveyard(p.x, p.y)) return;
                 
-                const dist = distance(player, other);
+                const dist = Math.hypot(myPlayer.x - p.x, myPlayer.y - p.y);
                 
-                if (dist < CONFIG.COLLISION_DISTANCE) {
-                    // Collision! Start quiz battle
-                    startQuizBattle(id, other);
+                if (dist < COLLISION_DISTANCE) {
+                    // COLLISION! Start Battle
+                    lastBattleTime = now;
+                    console.log("Collision with", p.name);
+                    
+                    // Pick a random question
+                    const qIndex = Math.floor(Math.random() * INDUS_QUESTIONS.length);
+                    const question = INDUS_QUESTIONS[qIndex];
+
+                    socket.emit('startBattle', {
+                        initiator: myId,
+                        target: id,
+                        question: question
+                    });
                 }
             });
         }
 
-        // ===================================================================
-        // DRAWING FUNCTIONS
-        // ===================================================================
+        function drawEmojiPlayer(x, y, emoji, name, isMe) {
+            ctx.font = `${PLAYER_SIZE}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Draw Name
+            ctx.fillStyle = isMe ? '#e94560' : '#fff';
+            ctx.font = '14px Arial';
+            ctx.fillText(name, x, y - 30);
+
+            // Draw Emoji
+            ctx.font = `${PLAYER_SIZE}px Arial`;
+            ctx.fillText(emoji, x, y);
+
+            // Draw Ring if me
+            if (isMe) {
+                ctx.beginPath();
+                ctx.arc(x, y, 25, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(233, 69, 96, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+        }
+
         function drawGrid() {
-            ctx.strokeStyle = 'rgba(233, 69, 96, 0.1)';
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
             ctx.lineWidth = 1;
-            const startX = Math.floor(camera.x / 50) * 50;
-            const startY = Math.floor(camera.y / 50) * 50;
-            for (let x = startX; x < camera.x + canvas.width; x += 50) {
+            const size = 100;
+            
+            const startX = Math.floor(camera.x / size) * size;
+            const startY = Math.floor(camera.y / size) * size;
+            
+            for (let x = startX; x < camera.x + canvas.width; x += size) {
                 ctx.beginPath();
                 ctx.moveTo(x - camera.x, 0);
                 ctx.lineTo(x - camera.x, canvas.height);
                 ctx.stroke();
             }
-            for (let y = startY; y < camera.y + canvas.height; y += 50) {
+            
+            for (let y = startY; y < camera.y + canvas.height; y += size) {
                 ctx.beginPath();
                 ctx.moveTo(0, y - camera.y);
                 ctx.lineTo(canvas.width, y - camera.y);
@@ -1621,363 +716,108 @@
             }
         }
 
-        function drawWorldBorder() {
-            ctx.strokeStyle = '#e94560';
-            ctx.lineWidth = 10;
-            ctx.strokeRect(-camera.x, -camera.y, CONFIG.WORLD_WIDTH, CONFIG.WORLD_HEIGHT);
+        function respawn() {
+            // Send to graveyard
+            myPlayer.x = GRAVEYARD.x;
+            myPlayer.y = GRAVEYARD.y;
+            myPlayer.knockouts = 0; // Reset knockouts on death
+            
+            // Start respawn timer
+            isRespawning = true;
+            respawnTimer = Date.now();
+            document.getElementById('respawnOverlay').style.display = 'block';
+            document.getElementById('respawnCountdown').textContent = '15';
         }
 
-        function drawGraveyard() {
-            const screenX = GRAVEYARD.x - camera.x;
-            const screenY = GRAVEYARD.y - camera.y;
-            const halfW = GRAVEYARD.width / 2;
-            const halfH = GRAVEYARD.height / 2;
+        // ===================================================================
+        // 4. QUIZ LOGIC
+        // ===================================================================
 
-            // Check if graveyard is visible
-            if (screenX + halfW < -100 || screenX - halfW > canvas.width + 100 ||
-                screenY + halfH < -100 || screenY - halfH > canvas.height + 100) {
-                return;
-            }
-
-            // Draw graveyard ground
-            ctx.fillStyle = 'rgba(30, 30, 40, 0.9)';
-            ctx.fillRect(screenX - halfW, screenY - halfH, GRAVEYARD.width, GRAVEYARD.height);
-
-            // Draw spooky fog effect
-            const gradient = ctx.createRadialGradient(screenX, screenY, 50, screenX, screenY, halfW);
-            gradient.addColorStop(0, 'rgba(100, 100, 120, 0.3)');
-            gradient.addColorStop(1, 'rgba(30, 30, 40, 0)');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(screenX - halfW, screenY - halfH, GRAVEYARD.width, GRAVEYARD.height);
-
-            // Draw fence around graveyard
-            ctx.strokeStyle = '#4a4a5a';
-            ctx.lineWidth = 8;
-            ctx.strokeRect(screenX - halfW, screenY - halfH, GRAVEYARD.width, GRAVEYARD.height);
-
-            // Draw fence posts
-            ctx.fillStyle = '#3a3a4a';
-            const postSpacing = 40;
-            for (let i = 0; i <= GRAVEYARD.width; i += postSpacing) {
-                // Top fence
-                ctx.fillRect(screenX - halfW + i - 4, screenY - halfH - 15, 8, 20);
-                // Bottom fence
-                ctx.fillRect(screenX - halfW + i - 4, screenY + halfH - 5, 8, 20);
-            }
-            for (let i = 0; i <= GRAVEYARD.height; i += postSpacing) {
-                // Left fence
-                ctx.fillRect(screenX - halfW - 15, screenY - halfH + i - 4, 20, 8);
-                // Right fence
-                ctx.fillRect(screenX + halfW - 5, screenY - halfH + i - 4, 20, 8);
-            }
-
-            // Draw "GRAVEYARD" sign
-            ctx.save();
-            ctx.fillStyle = '#2a2a3a';
-            ctx.fillRect(screenX - 100, screenY - halfH - 50, 200, 40);
-            ctx.strokeStyle = '#5a5a6a';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(screenX - 100, screenY - halfH - 50, 200, 40);
+        function showQuiz(data) {
+            const modal = document.getElementById('quizModal');
+            const qText = document.getElementById('quizQuestion');
+            const opts = document.getElementById('quizOptions');
+            const timer = document.getElementById('timerBar');
             
-            ctx.fillStyle = '#888';
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('☠️ GRAVEYARD ☠️', screenX, screenY - halfH - 25);
-            ctx.restore();
+            modal.style.display = 'block';
+            qText.innerText = data.question.q;
+            opts.innerHTML = '';
+            
+            // Randomize answers so they aren't always in same spot
+            let answers = data.question.a.map((ans, i) => ({ txt: ans, idx: i }));
+            answers.sort(() => Math.random() - 0.5);
 
-            // Draw gravestones
-            GRAVESTONES.forEach(stone => {
-                const stoneX = stone.x - camera.x;
-                const stoneY = stone.y - camera.y;
-
-                // Skip if off screen
-                if (stoneX < -50 || stoneX > canvas.width + 50 ||
-                    stoneY < -50 || stoneY > canvas.height + 50) return;
-
-                ctx.save();
-                ctx.translate(stoneX, stoneY);
-                ctx.rotate(stone.rotation);
-
-                // Draw gravestone base
-                ctx.fillStyle = '#4a4a5a';
-                ctx.beginPath();
-                ctx.moveTo(-stone.size/2, 0);
-                ctx.lineTo(-stone.size/2, -stone.size * 1.2);
-                ctx.quadraticCurveTo(-stone.size/2, -stone.size * 1.5, 0, -stone.size * 1.5);
-                ctx.quadraticCurveTo(stone.size/2, -stone.size * 1.5, stone.size/2, -stone.size * 1.2);
-                ctx.lineTo(stone.size/2, 0);
-                ctx.closePath();
-                ctx.fill();
-
-                // Draw gravestone outline
-                ctx.strokeStyle = '#3a3a4a';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                // Draw gravestone text/emoji
-                ctx.fillStyle = '#888';
-                ctx.font = `${stone.size * 0.5}px Arial`;
-                ctx.textAlign = 'center';
-                ctx.fillText(stone.text, 0, -stone.size * 0.7);
-
-                // Draw emoji on top
-                ctx.font = `${stone.size * 0.6}px Arial`;
-                ctx.fillText(stone.style, 0, -stone.size * 1.1);
-
-                ctx.restore();
+            answers.forEach(ans => {
+                const btn = document.createElement('div');
+                btn.className = 'quiz-btn';
+                btn.innerText = ans.txt;
+                btn.onclick = () => submitAnswer(data.battleId, ans.idx);
+                opts.appendChild(btn);
             });
 
-            // Draw "SAFE ZONE" indicator
-            const pulse = Math.sin(Date.now() / 500) * 0.3 + 0.7;
-            ctx.fillStyle = `rgba(100, 200, 100, ${pulse * 0.3})`;
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillStyle = `rgba(100, 200, 100, ${pulse})`;
-            ctx.fillText('🛡️ SAFE ZONE - No Battles Here! 🛡️', screenX, screenY + halfH - 20);
-
-            // Draw creepy ambient particles (floating souls)
-            const time = Date.now() / 1000;
-            for (let i = 0; i < 8; i++) {
-                const px = screenX + Math.sin(time + i * 1.5) * 200;
-                const py = screenY + Math.cos(time * 0.7 + i) * 150 + Math.sin(time * 2 + i) * 20;
-                const opacity = 0.2 + Math.sin(time * 2 + i) * 0.1;
-                ctx.fillStyle = `rgba(200, 200, 255, ${opacity})`;
-                ctx.font = '20px Arial';
-                ctx.fillText('👻', px, py);
-            }
+            // Animate Timer
+            timer.style.width = '100%';
+            setTimeout(() => { timer.style.width = '0%'; }, 50);
         }
 
-        function drawMinimap() {
-            const scale = 150 / CONFIG.WORLD_WIDTH;
-            minimapCtx.clearRect(0, 0, 150, 150);
-            
-            minimapCtx.fillStyle = 'rgba(26, 26, 46, 0.8)';
-            minimapCtx.fillRect(0, 0, 150, 150);
-            
-            // Draw graveyard on minimap
-            minimapCtx.fillStyle = 'rgba(60, 60, 80, 0.8)';
-            minimapCtx.fillRect(
-                (GRAVEYARD.x - GRAVEYARD.width/2) * scale,
-                (GRAVEYARD.y - GRAVEYARD.height/2) * scale,
-                GRAVEYARD.width * scale,
-                GRAVEYARD.height * scale
-            );
-            minimapCtx.strokeStyle = '#666';
-            minimapCtx.lineWidth = 1;
-            minimapCtx.strokeRect(
-                (GRAVEYARD.x - GRAVEYARD.width/2) * scale,
-                (GRAVEYARD.y - GRAVEYARD.height/2) * scale,
-                GRAVEYARD.width * scale,
-                GRAVEYARD.height * scale
-            );
-            
-            minimapCtx.strokeStyle = '#e94560';
-            minimapCtx.lineWidth = 2;
-            minimapCtx.strokeRect(0, 0, 150, 150);
-            
-            // Draw player
-            minimapCtx.fillStyle = '#e94560';
-            minimapCtx.beginPath();
-            minimapCtx.arc(player.x * scale, player.y * scale, 4, 0, Math.PI * 2);
-            minimapCtx.fill();
-            
-            // Draw other players
-            Object.values(otherPlayers).forEach(p => {
-                // Show graveyard players differently
-                minimapCtx.fillStyle = isInGraveyard(p.x, p.y) ? '#888' : '#4ECDC4';
-                minimapCtx.beginPath();
-                minimapCtx.arc(p.x * scale, p.y * scale, 3, 0, Math.PI * 2);
-                minimapCtx.fill();
+        function submitAnswer(battleId, answerIndex) {
+            socket.emit('answerBattle', {
+                battleId: battleId,
+                answerIndex: answerIndex
             });
+            document.getElementById('quizModal').style.display = 'none';
         }
 
-        function updateCamera() {
-            camera.x = player.x - canvas.width / 2;
-            camera.y = player.y - canvas.height / 2;
-            camera.x = Math.max(0, Math.min(CONFIG.WORLD_WIDTH - canvas.width, camera.x));
-            camera.y = Math.max(0, Math.min(CONFIG.WORLD_HEIGHT - canvas.height, camera.y));
-        }
-
-        function updateStats() {
-            const rank = player.rank;
-            document.getElementById('playerRank').innerHTML = `${rank.badge} ${rank.name}`;
-            document.getElementById('playerRank').style.color = rank.color;
-            document.getElementById('knockoutCount').textContent = player.knockouts;
-        }
-
-        function updatePlayerCount() {
-            const count = 1 + Object.keys(otherPlayers).length;
-            document.getElementById('playerCount').textContent = count;
-        }
-
-        function updateLeaderboard() {
-            const allPlayers = [
-                { 
-                    name: player.name,
-                    emoji: player.emoji,
-                    knockouts: player.knockouts,
-                    isMe: true 
-                },
-                ...Object.values(otherPlayers).map(p => ({ 
-                    name: p.name, 
-                    emoji: p.emoji,
-                    knockouts: p.knockouts || 0,
-                    isMe: false 
-                }))
-            ].sort((a, b) => b.knockouts - a.knockouts).slice(0, 10);
-
-            const leaderboardHtml = allPlayers.map((p, i) => {
-                const className = p.isMe ? 'leaderboard-entry current-player' : 'leaderboard-entry';
-                const rank = getRank(p.knockouts);
-                return `<div class="${className}">
-                    <span>${i + 1}. ${rank.badge} ${p.emoji} ${p.name}</span>
-                    <span style="color: #e94560; font-weight: bold;">${p.knockouts} KO${p.knockouts !== 1 ? 's' : ''}</span>
-                </div>`;
-            }).join('');
-            document.getElementById('leaderboardList').innerHTML = leaderboardHtml;
+        function closeQuiz() {
+            document.getElementById('quizModal').style.display = 'none';
         }
 
         // ===================================================================
-        // GAME LOOP
+        // 5. UTILITIES (Input, Resize, Accessibility)
         // ===================================================================
-        function gameLoop() {
-            if (!gameStarted) return;
-            const now = Date.now();
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Handle movement
-            let dx = 0, dy = 0;
-            if (keys.ArrowUp || keys.KeyW) dy -= 1;
-            if (keys.ArrowDown || keys.KeyS) dy += 1;
-            if (keys.ArrowLeft || keys.KeyA) dx -= 1;
-            if (keys.ArrowRight || keys.KeyD) dx += 1;
-
-            // Normalize diagonal movement
-            if (dx !== 0 && dy !== 0) {
-                const len = Math.sqrt(dx * dx + dy * dy);
-                dx /= len;
-                dy /= len;
-            }
-
-            player.move(dx, dy);
-            
-            updateCamera();
-            drawGrid();
-            drawWorldBorder();
-            drawGraveyard();
-
-            // Draw other players
-            Object.values(otherPlayers).forEach(p => p.draw(ctx, camera.x, camera.y));
-            
-            // Draw current player
-            player.draw(ctx, camera.x, camera.y);
-
-            checkCollisions();
-            updateStats();
-            updateLeaderboard();
-            drawMinimap();
-
-            // Sync to Firebase periodically
-            if (now % 100 < 16) {
-                syncPlayerToFirebase();
-            }
-
-            requestAnimationFrame(gameLoop);
+        // Input Listeners
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+        
+        // Resize Handling
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
-
-        // ===================================================================
-        // GAME START
-        // ===================================================================
-        function startGame() {
-            playerName = document.getElementById('playerName').value.trim();
-            if (!playerName) {
-                alert('Please enter your name!');
-                speakText('Please enter your name!', true);
-                return;
-            }
-
-            currentRoom = document.getElementById('roomSelect').value;
-            playerId = generateId();
-            
-            const startPos = getRandomPosition();
-            player = new Player(startPos.x, startPos.y, selectedEmoji, playerName);
-
-            document.getElementById('startMenu').classList.add('hidden');
-            document.getElementById('stats').classList.remove('hidden');
-            document.getElementById('leaderboard').classList.remove('hidden');
-            document.getElementById('minimap').classList.remove('hidden');
-
-            if (firebaseEnabled) {
-                listenToOtherPlayers();
-                listenForKnockouts();
-                listenForBattles();
-                syncPlayerToFirebase();
-            }
-
-            gameStarted = true;
-            lastUpdate = Date.now();
-
-            // Start background music
-            const bgMusic = document.getElementById('bgMusic');
-            bgMusic.volume = 0.3;
-            bgMusic.play().catch(e => console.log('Music autoplay blocked:', e));
-
-            const arenaLetter = currentRoom.split('-')[1].toUpperCase();
-            speakText(`Welcome ${playerName} to Arena ${arenaLetter}! Collide with other players to battle. Answer questions correctly and quickly to knock them out!`);
-
-            gameLoop();
-        }
-
-        // ===================================================================
-        // INPUT HANDLERS
-        // ===================================================================
         window.addEventListener('resize', resizeCanvas);
 
-        document.addEventListener('keydown', (e) => {
-            const tag = e.target.tagName;
-            if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-
-            if (MOVE_KEYS.includes(e.code)) {
-                e.preventDefault();
-                keys[e.code] = true;
-            }
+        // Emoji Selector Logic
+        const emojis = ["🛡️", "⚔️", "🏺", "🐮", "👑", "🧱", "🌽", "🐅"];
+        const selector = document.getElementById('emojiSelector');
+        emojis.forEach(e => {
+            const el = document.createElement('div');
+            el.className = 'emoji-option';
+            el.innerText = e;
+            el.onclick = () => {
+                document.querySelectorAll('.emoji-option').forEach(x => x.classList.remove('selected'));
+                el.classList.add('selected');
+                myPlayer.emoji = e;
+            };
+            if(e === myPlayer.emoji) el.classList.add('selected');
+            selector.appendChild(el);
         });
 
-        document.addEventListener('keyup', (e) => {
-            const tag = e.target.tagName;
-            if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-
-            if (MOVE_KEYS.includes(e.code)) {
-                e.preventDefault();
-                keys[e.code] = false;
-            }
-        });
+        // Accessibility Functions
+        function toggleDyslexia() {
+            document.body.classList.toggle('dyslexia-font');
+            settings.dyslexia = !settings.dyslexia;
+        }
+        function toggleContrast() {
+            document.body.classList.toggle('high-contrast');
+            settings.contrast = !settings.contrast;
+        }
+        function toggleMotion() {
+            settings.motion = !settings.motion;
+            alert(settings.motion ? "Motion enabled" : "Motion reduced");
+        }
 
         document.getElementById('startButton').addEventListener('click', startGame);
-        document.getElementById('playerName').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') startGame();
-        });
-
-        window.addEventListener('beforeunload', () => {
-            removePlayerFromFirebase();
-        });
-
-        // ===================================================================
-        // INITIALIZE
-        // ===================================================================
-        resizeCanvas();
-        console.log('Emoji Battle - Multiplayer Arena');
-        console.log('Firebase Status:', firebaseEnabled ? 'Connected ✓' : 'Not configured ⚠️');
-
-        if (firebaseEnabled) {
-            updateRoomCounts();
-            setInterval(() => {
-                if (!gameStarted) {
-                    updateRoomCounts();
-                }
-            }, 3000);
-        }
     </script>
 </body>
 </html>
