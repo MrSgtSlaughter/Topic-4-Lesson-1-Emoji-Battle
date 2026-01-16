@@ -113,6 +113,79 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Handle battle answer
+    socket.on('answerBattle', (data) => {
+        if (currentRoom && rooms[currentRoom]) {
+            const { battleId, answerIndex } = data;
+            const battle = rooms[currentRoom].battles[battleId];
+            
+            if (!battle) {
+                console.log('Battle not found:', battleId);
+                return;
+            }
+
+            // Track who answered
+            if (!battle.answers) {
+                battle.answers = {};
+            }
+            
+            battle.answers[playerId] = {
+                index: answerIndex,
+                time: Date.now() - battle.timestamp,
+                correct: answerIndex === battle.question.c
+            };
+
+            console.log(`${playerId} answered ${answerIndex} (correct: ${battle.question.c})`);
+
+            // Check if both players have answered
+            const initiatorAnswer = battle.answers[battle.initiator];
+            const targetAnswer = battle.answers[battle.target];
+
+            if (initiatorAnswer && targetAnswer) {
+                // Determine winner
+                let winner = null;
+                let loser = null;
+
+                if (initiatorAnswer.correct && !targetAnswer.correct) {
+                    winner = battle.initiator;
+                    loser = battle.target;
+                } else if (!initiatorAnswer.correct && targetAnswer.correct) {
+                    winner = battle.target;
+                    loser = battle.initiator;
+                } else if (initiatorAnswer.correct && targetAnswer.correct) {
+                    // Both correct - fastest wins
+                    if (initiatorAnswer.time < targetAnswer.time) {
+                        winner = battle.initiator;
+                        loser = battle.target;
+                    } else {
+                        winner = battle.target;
+                        loser = battle.initiator;
+                    }
+                }
+                // If both wrong, no winner
+
+                // Update winner's knockouts
+                if (winner && rooms[currentRoom].players[winner]) {
+                    rooms[currentRoom].players[winner].knockouts = 
+                        (rooms[currentRoom].players[winner].knockouts || 0) + 1;
+                }
+
+                // Broadcast result
+                io.to(currentRoom).emit('battleResult', {
+                    battleId,
+                    winner,
+                    loser,
+                    winnerKnockouts: rooms[currentRoom].players[winner]?.knockouts || 0
+                });
+
+                // Clean up battle
+                delete rooms[currentRoom].battles[battleId];
+
+                console.log(`Battle ${battleId} complete: Winner = ${winner}`);
+            }
+        }
+    });
+
     // Battle result
     socket.on('battleResult', (resultData) => {
         if (currentRoom && rooms[currentRoom]) {
