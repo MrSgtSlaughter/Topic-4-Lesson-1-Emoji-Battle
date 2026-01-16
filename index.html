@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indus Valley Emoji Battle - Multiplayer Arena</title>
+    <link href="https://fonts.googleapis.com/css2?family=OpenDyslexic&display=swap" rel="stylesheet">
+    <style>
+        /* --- ORIGINAL STYLES PRESERVED --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; overflow: hidden; background: #1a1a2e; }
+        
+        /* Accessibility Modes */
+        body.dyslexia-font, body.dyslexia-font * { font-family: 'OpenDyslexic', 'Arial', sans-serif !important; }
+        body.high-contrast { background: #000; color: #fff; }
+        body.high-contrast #startMenu { background: #000; border: 3px solid #fff; color: #fff; }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(135deg, #16213e 0%, #0f3460 50%, #1a1a2e 100%);
+            cursor: crosshair;
+        }
+
+        /* UI Overlay */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        
+        /* HUD */
+        #hud {
+            position: absolute; top: 20px; left: 20px;
+            color: white; font-size: 20px; font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            pointer-events: auto;
+        }
+
+        /* Accessibility Controls */
+        #a11y-controls {
+            position: absolute; top: 20px; right: 20px;
+            display: flex; gap: 10px; pointer-events: auto;
+        }
+        .a11y-btn {
+            background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255,255,255,0.5);
+            color: white; padding: 8px 12px; cursor: pointer; border-radius: 8px;
+            font-size: 14px; transition: all 0.2s;
+        }
+        .a11y-btn:hover { background: rgba(255, 255, 255, 0.4); transform: scale(1.05); }
+
+        /* Start Menu */
+        #startMenu {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 20px;
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 500px; width: 90%; pointer-events: auto; z-index: 100;
+        }
+        h1 { color: #e94560; margin-bottom: 20px; font-size: 2.5em; text-shadow: 2px 2px 0px #000; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+        input[type="text"], select {
+            width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ddd;
+            border-radius: 8px; margin-bottom: 10px;
+        }
+        
+        /* Emoji Selection */
+        .emoji-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
+        .emoji-option {
+            font-size: 24px; cursor: pointer; padding: 10px; border-radius: 50%;
+            border: 2px solid transparent; transition: transform 0.2s; background: #f0f0f0;
+        }
+        .emoji-option:hover { transform: scale(1.2); background: #fff; }
+        .emoji-option.selected { border-color: #e94560; background: #ffd1d1; transform: scale(1.1); }
+
+        #startButton {
+            background: #e94560; color: white; border: none; padding: 15px 40px;
+            font-size: 20px; border-radius: 50px; cursor: pointer;
+            transition: transform 0.1s, background 0.2s; width: 100%; font-weight: bold;
+        }
+        #startButton:hover { background: #ff2e63; transform: scale(1.02); }
+        #startButton:active { transform: scale(0.98); }
+
+        /* Connection Status */
+        #connection-status {
+            margin-top: 10px; font-size: 12px; color: #666;
+        }
+
+        /* Quiz Modal */
+        #quizModal {
+            display: none; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); background: white; padding: 30px;
+            border-radius: 15px; width: 90%; max-width: 450px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.7); border: 4px solid #e94560;
+            z-index: 200; text-align: center; pointer-events: auto;
+        }
+        .quiz-question { font-size: 20px; margin-bottom: 20px; color: #333; font-weight: bold; }
+        .quiz-options { display: flex; flex-direction: column; gap: 10px; }
+        .quiz-btn {
+            background: #f0f0f0; border: 2px solid #ddd; padding: 15px;
+            border-radius: 10px; cursor: pointer; font-size: 16px; transition: all 0.2s;
+        }
+        .quiz-btn:hover { background: #e0e0e0; border-color: #999; }
+        .quiz-timer {
+            height: 10px; background: #eee; margin-top: 20px; border-radius: 5px; overflow: hidden;
+        }
+        .quiz-timer-bar {
+            height: 100%; background: #e94560; width: 100%; transition: width 1s linear;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        
+        <div id="a11y-controls">
+            <button class="a11y-btn" onclick="toggleDyslexia()">Dyslexia Font</button>
+            <button class="a11y-btn" onclick="toggleContrast()">High Contrast</button>
+            <button class="a11y-btn" onclick="toggleMotion()">Reduce Motion</button>
+        </div>
+
+        <div id="hud" style="display: none;">
+            <div id="score-display">🏆 Knockouts: 0</div>
+            <div id="room-display">📍 Room: Lobby</div>
+            <div id="leaderboard-display" style="font-size: 14px; margin-top: 10px; opacity: 0.8;"></div>
+        </div>
+
+        <div id="startMenu">
+            <h1>🛡️ Indus Battle</h1>
+            
+            <div class="input-group">
+                <label for="playerName">Enter Your Name:</label>
+                <input type="text" id="playerName" placeholder="Warrior Name" maxlength="15">
+            </div>
+
+            <label>Choose Your Avatar:</label>
+            <div class="emoji-grid" id="emojiSelector">
+                </div>
+
+            <div class="input-group">
+                <label for="roomSelect">Select Arena:</label>
+                <select id="roomSelect">
+                    <option value="arena-a">Arena A (Training)</option>
+                    <option value="arena-b">Arena B (Harappa)</option>
+                    <option value="arena-c">Arena C (Mohenjo-Daro)</option>
+                    <option value="arena-d">Arena D (Citadel)</option>
+                    <option value="arena-e">Arena E (The Great Bath)</option>
+                </select>
+                <div id="room-counts" style="font-size: 12px; color: #666; margin-top: 5px;">
+                    Loading arena populations...
+                </div>
+            </div>
+
+            <button id="startButton">ENTER ARENA</button>
+            <div id="connection-status">Connecting to server...</div>
+        </div>
+
+        <div id="quizModal">
+            <div class="quiz-question" id="quizQuestion">Question goes here?</div>
+            <div class="quiz-options" id="quizOptions">
+                </div>
+            <div class="quiz-timer">
+                <div class="quiz-timer-bar" id="timerBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        // ===================================================================
+        // 1. SETUP & CONFIGURATION
+        // ===================================================================
+        const socket = io(); // Auto-connects to Render or Localhost
+        
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game State
+        let gameStarted = false;
+        let myId = null;
+        let myPlayer = {
+            x: 0, y: 0,
+            emoji: '🛡️',
+            name: 'Player',
+            color: '#e94560',
+            knockouts: 0,
+            room: 'arena-a'
+        };
+        let otherPlayers = {}; // Stores all opponents
+        
+        // Inputs
+        const keys = {};
+        const mouse = { x: 0, y: 0 };
+        
+        // Constants
+        const SPEED = 5;
+        const PLAYER_SIZE = 40;
+        
+        // Accessibility State
+        let settings = { dyslexia: false, contrast: false, motion: true };
+
+        // Quiz Data (Indus Valley Civilization)
+        const INDUS_QUESTIONS = [
+            { q: "Which river was the Indus Valley Civilization built around?", a: ["Indus River", "Nile River", "Yellow River"], c: 0 },
+            { q: "What were the two main cities?", a: ["Harappa & Mohenjo-Daro", "Athens & Sparta", "Rome & Carthage"], c: 0 },
+            { q: "What was used to build their houses?", a: ["Baked Mud Bricks", "Stone", "Wood"], c: 0 },
+            { q: "What famous structure was found in Mohenjo-Daro?", a: ["The Great Bath", "The Great Pyramid", "The Colosseum"], c: 0 },
+            { q: "What writing system did they use?", a: ["Undeciphered Script", "Hieroglyphs", "Cuneiform"], c: 0 },
+            { q: "What material were their seals made of?", a: ["Steatite (Stone)", "Gold", "Plastic"], c: 0 },
+            { q: "Did they have a sewage system?", a: ["Yes, advanced drainage", "No", "Only for kings"], c: 0 },
+            { q: "Why is India called a subcontinent?", a: ["It's a large landmass separated by mountains", "It's smaller than other continents", "It has many religions", "It was discovered late"], c: 0 },
+            { q: "Who founded the Maurya Empire?", a: ["Chandragupta Maurya", "Ashoka", "Kautilya", "Alexander the Great"], c: 0 },
+            { q: "What was Kautilya famous for writing?", a: ["Arthashastra (book on government)", "The Vedas", "Poetry", "Religious texts"], c: 0 },
+            { q: "How did Chandragupta defeat the Nanda Dynasty?", a: ["With Kautilya's help and strategy", "With magic powers", "Through marriage", "He didn't defeat them"], c: 0 },
+            { q: "What was the capital of the Maurya Empire?", a: ["Pataliputra", "Delhi", "Mohenjo-Daro", "Babylon"], c: 0 },
+            { q: "Which mountains separate India from the rest of Asia?", a: ["Himalayas", "Rocky Mountains", "Alps", "Andes"], c: 0 },
+            { q: "What did Kautilya advise rulers to have?", a: ["Spies and a strong army", "Only priests", "No government", "Foreign allies only"], c: 0 }
+        ];
+
+        // ===================================================================
+        // 2. SOCKET.IO EVENTS (The "Phone Line" to Server)
+        // ===================================================================
+        
+        socket.on('connect', () => {
+            console.log("✅ Connected to Server! ID:", socket.id);
+            myId = socket.id;
+            document.getElementById('connection-status').innerText = "🟢 Server Online";
+            document.getElementById('connection-status').style.color = "green";
+        });
+
+        socket.on('disconnect', () => {
+            console.log("❌ Disconnected");
+            document.getElementById('connection-status').innerText = "🔴 Disconnected - Reconnecting...";
+            document.getElementById('connection-status').style.color = "red";
+        });
+
+        // Update Room Populations on Start Screen
+        socket.on('roomCounts', (counts) => {
+            const display = Object.keys(counts).map(k => `${k.replace('arena-', '').toUpperCase()}: ${counts[k]}`).join(' | ');
+            document.getElementById('room-counts').innerText = display;
+        });
+
+        // Initial Room Load
+        socket.on('roomState', (data) => {
+            // Load everyone currently in the room
+            otherPlayers = data.players || {};
+            delete otherPlayers[myId]; // Remove myself from this list
+        });
+
+        // New Player Joined
+        socket.on('playerJoined', (data) => {
+            if (data.playerId !== myId) {
+                otherPlayers[data.playerId] = data.playerData;
+            }
+        });
+
+        // Player Moved
+        socket.on('playerUpdate', (data) => {
+            if (otherPlayers[data.playerId]) {
+                // Simple interpolation could go here, but direct update for now
+                otherPlayers[data.playerId].x = data.playerData.x;
+                otherPlayers[data.playerId].y = data.playerData.y;
+                otherPlayers[data.playerId].knockouts = data.playerData.knockouts;
+            }
+        });
+
+        // Player Left
+        socket.on('playerLeft', (data) => {
+            delete otherPlayers[data.playerId];
+        });
+
+        // Battle Request Received
+        socket.on('battleInvite', (data) => {
+            // You are being attacked!
+            showQuiz(data);
+        });
+
+        // Battle Result
+        socket.on('battleResult', (data) => {
+            closeQuiz();
+            if (data.winner === myId) {
+                myPlayer.knockouts++;
+                alert("🎉 VICTORY! You won the battle!");
+            } else if (data.loser === myId) {
+                respawn();
+                alert("💀 DEFEATED! You have been respawned.");
+            }
+        });
+
+        // ===================================================================
+        // 3. GAME ENGINE
+        // ===================================================================
+
+        function startGame() {
+            const nameInput = document.getElementById('playerName').value.trim();
+            const roomSelect = document.getElementById('roomSelect').value;
+
+            if (!nameInput) {
+                alert("Please enter a name!");
+                return;
+            }
+
+            // Setup My Player
+            myPlayer.name = nameInput;
+            myPlayer.room = roomSelect;
+            
+            // Random Start Position
+            myPlayer.x = Math.random() * (canvas.width - 100) + 50;
+            myPlayer.y = Math.random() * (canvas.height - 100) + 50;
+
+            // Join the Server Room
+            socket.emit('joinRoom', {
+                room: roomSelect,
+                playerData: myPlayer
+            });
+
+            // Update UI
+            document.getElementById('startMenu').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            document.getElementById('room-display').innerText = "📍 " + roomSelect.toUpperCase();
+            
+            gameStarted = true;
+            resizeCanvas();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop() {
+            if (!gameStarted) return;
+
+            // 1. Move
+            handleMovement();
+
+            // 2. Draw Background
+            ctx.fillStyle = settings.contrast ? '#000' : '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+
+            // 3. Draw Others
+            Object.keys(otherPlayers).forEach(id => {
+                const p = otherPlayers[id];
+                drawEmojiPlayer(p.x, p.y, p.emoji, p.name, false);
+            });
+
+            // 4. Draw Me
+            drawEmojiPlayer(myPlayer.x, myPlayer.y, myPlayer.emoji, myPlayer.name, true);
+
+            // 5. HUD Update
+            document.getElementById('score-display').innerText = `🏆 Knockouts: ${myPlayer.knockouts}`;
+
+            // 6. Send Update to Server (Throttle this in a real pro game, but ok for now)
+            socket.emit('updatePlayer', {
+                x: myPlayer.x,
+                y: myPlayer.y,
+                knockouts: myPlayer.knockouts
+            });
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function handleMovement() {
+            let dx = 0; 
+            let dy = 0;
+
+            if (keys['ArrowUp'] || keys['KeyW']) dy = -SPEED;
+            if (keys['ArrowDown'] || keys['KeyS']) dy = SPEED;
+            if (keys['ArrowLeft'] || keys['KeyA']) dx = -SPEED;
+            if (keys['ArrowRight'] || keys['KeyD']) dx = SPEED;
+
+            // Boundary Checks
+            if (myPlayer.x + dx > 0 && myPlayer.x + dx < canvas.width) myPlayer.x += dx;
+            if (myPlayer.y + dy > 0 && myPlayer.y + dy < canvas.height) myPlayer.y += dy;
+
+            // Collision Check (Trigger Battle)
+            // Only the moving player triggers the battle to avoid double-triggers
+            if (dx !== 0 || dy !== 0) {
+                checkCollisions();
+            }
+        }
+
+        // Throttle battles so they don't spam
+        let lastBattleTime = 0;
+        function checkCollisions() {
+            const now = Date.now();
+            if (now - lastBattleTime < 3000) return; // 3 second cooldown
+
+            Object.keys(otherPlayers).forEach(id => {
+                const p = otherPlayers[id];
+                const dist = Math.hypot(myPlayer.x - p.x, myPlayer.y - p.y);
+                
+                if (dist < PLAYER_SIZE) {
+                    // COLLISION! Start Battle
+                    lastBattleTime = now;
+                    console.log("Collision with", p.name);
+                    
+                    // Pick a random question
+                    const qIndex = Math.floor(Math.random() * INDUS_QUESTIONS.length);
+                    const question = INDUS_QUESTIONS[qIndex];
+
+                    socket.emit('startBattle', {
+                        initiator: myId,
+                        target: id,
+                        question: question
+                    });
+                }
+            });
+        }
+
+        function drawEmojiPlayer(x, y, emoji, name, isMe) {
+            ctx.font = `${PLAYER_SIZE}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Draw Name
+            ctx.fillStyle = isMe ? '#e94560' : '#fff';
+            ctx.font = '14px Arial';
+            ctx.fillText(name, x, y - 30);
+
+            // Draw Emoji
+            ctx.font = `${PLAYER_SIZE}px Arial`;
+            ctx.fillText(emoji, x, y);
+
+            // Draw Ring if me
+            if (isMe) {
+                ctx.beginPath();
+                ctx.arc(x, y, 25, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(233, 69, 96, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 1;
+            const size = 50;
+            for (let x = 0; x < canvas.width; x += size) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += size) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+        }
+
+        function respawn() {
+            myPlayer.x = Math.random() * (canvas.width - 100) + 50;
+            myPlayer.y = Math.random() * (canvas.height - 100) + 50;
+        }
+
+        // ===================================================================
+        // 4. QUIZ LOGIC
+        // ===================================================================
+
+        function showQuiz(data) {
+            const modal = document.getElementById('quizModal');
+            const qText = document.getElementById('quizQuestion');
+            const opts = document.getElementById('quizOptions');
+            const timer = document.getElementById('timerBar');
+            
+            modal.style.display = 'block';
+            qText.innerText = data.question.q;
+            opts.innerHTML = '';
+            
+            // Randomize answers so they aren't always in same spot
+            let answers = data.question.a.map((ans, i) => ({ txt: ans, idx: i }));
+            answers.sort(() => Math.random() - 0.5);
+
+            answers.forEach(ans => {
+                const btn = document.createElement('div');
+                btn.className = 'quiz-btn';
+                btn.innerText = ans.txt;
+                btn.onclick = () => submitAnswer(data.battleId, ans.idx);
+                opts.appendChild(btn);
+            });
+
+            // Animate Timer
+            timer.style.width = '100%';
+            setTimeout(() => { timer.style.width = '0%'; }, 50);
+        }
+
+        function submitAnswer(battleId, answerIndex) {
+            socket.emit('answerBattle', {
+                battleId: battleId,
+                answerIndex: answerIndex
+            });
+            document.getElementById('quizModal').style.display = 'none';
+        }
+
+        function closeQuiz() {
+            document.getElementById('quizModal').style.display = 'none';
+        }
+
+        // ===================================================================
+        // 5. UTILITIES (Input, Resize, Accessibility)
+        // ===================================================================
+
+        // Input Listeners
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+        
+        // Resize Handling
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // Emoji Selector Logic
+        const emojis = ["🛡️", "⚔️", "🏺", "🐮", "👑", "🧱", "🌽", "🐅"];
+        const selector = document.getElementById('emojiSelector');
+        emojis.forEach(e => {
+            const el = document.createElement('div');
+            el.className = 'emoji-option';
+            el.innerText = e;
+            el.onclick = () => {
+                document.querySelectorAll('.emoji-option').forEach(x => x.classList.remove('selected'));
+                el.classList.add('selected');
+                myPlayer.emoji = e;
+            };
+            if(e === myPlayer.emoji) el.classList.add('selected');
+            selector.appendChild(el);
+        });
+
+        // Accessibility Functions
+        function toggleDyslexia() {
+            document.body.classList.toggle('dyslexia-font');
+            settings.dyslexia = !settings.dyslexia;
+        }
+        function toggleContrast() {
+            document.body.classList.toggle('high-contrast');
+            settings.contrast = !settings.contrast;
+        }
+        function toggleMotion() {
+            settings.motion = !settings.motion;
+            alert(settings.motion ? "Motion enabled" : "Motion reduced");
+        }
+
+        document.getElementById('startButton').addEventListener('click', startGame);
+    </script>
+</body>
+</html>
