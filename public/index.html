@@ -371,20 +371,39 @@
         });
 
         // Battle Request Received
-        socket.on('battleInvite', (data) => {
-            // You are being attacked!
-            showQuiz(data);
+        // Battle Started (from server)
+        socket.on('battleStarted', (data) => {
+            console.log('📥 Received battleStarted event:', data);
+            console.log('My ID:', myId);
+            console.log('Initiator:', data.battleData.initiator);
+            console.log('Target:', data.battleData.target);
+            
+            // Check if I'm involved in this battle
+            if (data.battleData.initiator === myId || data.battleData.target === myId) {
+                console.log('✅ I am involved in this battle! Showing quiz...');
+                
+                // Pass the question and battleId to showQuiz
+                showQuiz({
+                    battleId: data.battleId,
+                    question: data.battleData.question,
+                    opponent: data.battleData.initiator === myId ? data.battleData.target : data.battleData.initiator
+                });
+            } else {
+                console.log('❌ Not my battle, ignoring');
+            }
         });
 
         // Battle Result
         socket.on('battleResult', (data) => {
+            console.log('Battle result:', data);
             closeQuiz();
+            
             if (data.winner === myId) {
                 myPlayer.knockouts++;
                 alert("🎉 VICTORY! You won the battle!");
             } else if (data.loser === myId) {
                 respawn();
-                alert("💀 DEFEATED! You have been respawned.");
+                alert("💀 DEFEATED! You have been sent to the graveyard!");
             }
         });
 
@@ -651,14 +670,25 @@
                 
                 const dist = Math.hypot(myPlayer.x - p.x, myPlayer.y - p.y);
                 
+                // Only log when getting close
+                if (dist < 200) {
+                    console.log(`Getting close to ${p.name}: ${Math.round(dist)}px (need ${COLLISION_DISTANCE}px)`);
+                }
+                
                 if (dist < COLLISION_DISTANCE) {
                     // COLLISION! Start Battle
                     lastBattleTime = now;
-                    console.log("Collision with", p.name);
+                    console.log("🔥 COLLISION DETECTED with", p.name);
                     
                     // Pick a random question
                     const qIndex = Math.floor(Math.random() * INDUS_QUESTIONS.length);
                     const question = INDUS_QUESTIONS[qIndex];
+
+                    console.log("📤 Sending startBattle event:", {
+                        initiator: myId,
+                        target: id,
+                        question: question
+                    });
 
                     socket.emit('startBattle', {
                         initiator: myId,
@@ -734,14 +764,21 @@
         // ===================================================================
 
         function showQuiz(data) {
+            console.log('🎯 showQuiz called with data:', data);
+            
             const modal = document.getElementById('quizModal');
             const qText = document.getElementById('quizQuestion');
             const opts = document.getElementById('quizOptions');
             const timer = document.getElementById('timerBar');
             
+            console.log('Modal element:', modal);
+            console.log('Question:', data.question);
+            
             modal.style.display = 'block';
             qText.innerText = data.question.q;
             opts.innerHTML = '';
+            
+            console.log('✅ Modal displayed, question text set');
             
             // Randomize answers so they aren't always in same spot
             let answers = data.question.a.map((ans, i) => ({ txt: ans, idx: i }));
@@ -755,17 +792,29 @@
                 opts.appendChild(btn);
             });
 
+            console.log(`✅ ${answers.length} answer buttons created`);
+
             // Animate Timer
             timer.style.width = '100%';
             setTimeout(() => { timer.style.width = '0%'; }, 50);
         }
 
         function submitAnswer(battleId, answerIndex) {
+            // Send answer to server
             socket.emit('answerBattle', {
                 battleId: battleId,
                 answerIndex: answerIndex
             });
-            document.getElementById('quizModal').style.display = 'none';
+            
+            // Disable all buttons while waiting
+            const buttons = document.querySelectorAll('.quiz-btn');
+            buttons.forEach(btn => {
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
+            });
+            
+            // Show waiting message
+            document.getElementById('quizQuestion').innerText = 'Waiting for opponent...';
         }
 
         function closeQuiz() {
